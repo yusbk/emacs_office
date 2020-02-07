@@ -1862,9 +1862,9 @@ In that case, insert the number."
                          (eshell/alias "d" "dired $1")
                          (eshell/alias "ll" "ls -l")
                          (eshell/alias "la" "ls -al")
-                         (eshell/alias "gw" "cd ~/Git-work")
-                         (eshell/alias "gp" "cd ~/Git-personal")
-                         (eshell/alias "gf" "cd ~/Git-fhi")
+                         (eshell/alias "gf" "c:/Users/ybka/Documents/GitHub")
+                         ;; (eshell/alias "gp" "cd ~/Git-personal")
+                         ;; (eshell/alias "gf" "cd ~/Git-fhi")
                          (eshell/alias "cdc" "cd C:/")
                          (eshell/alias "cdy" "c:/Users/ybka") ;personal folder
                          (eshell/alias "cd1" "cd c:/Users/ybka/OneDrive - Folkehelseinstituttet/")
