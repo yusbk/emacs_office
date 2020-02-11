@@ -2576,6 +2576,24 @@ if there is displayed buffer that have shell it will use that window"
             python-shell-interpreter-args "-i")))
   )
 
+;;; Database
+(use-package sql
+  :ensure t
+  :mode ("\\.\\(sqlite\\|db\\|sqlite3\\)\\'" . sql-mode)
+  :interpreter ("sql" . sql-mode)
+  :custom
+  (sql-sqlite-program "c:/Program Files/R/sqlite/sqlite3.exe")
+
+  ;; use only one database no need to login
+  (defalias 'sql-get-login 'ignore)
+  )
+
+(use-package sqlup-mode
+  ;;Upercase SQL words
+  :ensure t
+  :bind ("C-c u" . sqlup-capitalize-keywords-in-region)
+  :hook ((sql-mode sql-interactive-mode redis-mode) . sqlup-mode)
+  )
 ;;; Graphics
 (use-package graphviz-dot-mode
   ;; graphvis must be installed
