@@ -232,11 +232,11 @@
  )
 
  ;; Prefer utf8
-(prefer-coding-system 'utf-8)
+;; (prefer-coding-system 'utf-8)
 ;; (set-language-environment "UTF-8")
-(set-default-coding-systems 'utf-8)
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
+;; (set-default-coding-systems 'utf-8)
+;; (set-terminal-coding-system 'utf-8)
+;; (set-keyboard-coding-system 'utf-8)
 
 ;; Misc
 (set-frame-name "Emacs the Great")
@@ -1862,7 +1862,8 @@ In that case, insert the number."
                          (eshell/alias "d" "dired $1")
                          (eshell/alias "ll" "ls -l")
                          (eshell/alias "la" "ls -al")
-                         (eshell/alias "gf" "c:/Users/ybka/Documents/GitHub")
+                         (eshell/alias "gp" "c:/Users/ybka/Documents/GitHub")
+                         (eshell/alias "gf" "c:/Users/ybka/Documents/GitFH")
                          ;; (eshell/alias "gp" "cd ~/Git-personal")
                          ;; (eshell/alias "gf" "cd ~/Git-fhi")
                          (eshell/alias "cdc" "cd C:/")
@@ -2317,6 +2318,13 @@ In that case, insert the number."
   (setq comint-scroll-to-bottom-on-output t)
   (setq comint-move-point-for-output t)
 
+  ;; inferior not read-only
+  ;; https://github.com/emacs-ess/ESS/issues/300#issuecomment-231314374
+  (add-hook 'inferior-ess-mode-hook
+            (lambda()
+              (setq-local comint-use-prompt-regexp nil)
+              (setq-local inhibit-field-text-motion nil)))
+  
   ;; ;; Don't indent comments with one #
   ;; (defun my-ess-settings ()
   ;;   (setq ess-indent-with-fancy-comments nil))
@@ -2324,9 +2332,16 @@ In that case, insert the number."
   
   ;; ess-trace-bug.el
   (setq ess-use-tracebug t) ; permanent activation
+  (setq ess-tracebug-inject-source-p t)
+  
   ;;
   ;; Tooltip included in ESS
   (setq ess-describe-at-point-method 'tooltip) ; 'tooltip or nil (buffer)
+
+  ;; (require 'ess-r-args)
+  ;; (require 'ess-R-object-tooltip)
+  ;; (define-key ess-mode-map (kbd "C-c 1") 'r-show-head)
+  ;; (define-key ess-mode-map (kbd "C-c 2") 'r-show-str)
 
   (setq inferior-R-args "--no-save")
   (setq ess-R-font-lock-keywords
