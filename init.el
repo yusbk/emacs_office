@@ -232,8 +232,8 @@
  )
 
 ;; Prefer utf8
-(prefer-coding-system 'utf-8)
-(set-language-environment "UTF-8")
+(prefer-coding-system 'utf-8-unix)
+(set-language-environment 'utf-8)
 (set-default-coding-systems 'utf-8)
 ;; (set-terminal-coding-system 'utf-8)
 ;; (set-keyboard-coding-system 'utf-8)
@@ -2071,7 +2071,14 @@ Version 2017-09-01"
 
 
 
-;;;; Auto-completion with Company
+;;;; Auto-completion
+(use-package auto-complete
+  :defer 3
+  :hook
+  (ess-mode . auto-complete-mode)
+  :bind(:map my-search-map
+             ("C" . auto-complete-mode))
+  ) 
 
 (use-package company
   :defer 3
@@ -2087,12 +2094,10 @@ Version 2017-09-01"
          ("C-i" . company-complete-common)
          :map my-search-map
          ("<tab>" . company-complete-selection)
+         ("c" . company-mode)
          )
-
-  :init
-  ;; (global-company-mode)
   :config
-  (global-company-mode t)
+  ;; (global-company-mode)
 
   ;; Use Company for completion
   (bind-key [remap completion-at-point] #'company-complete company-mode-map)
@@ -2778,8 +2783,9 @@ In that case, insert the number."
   (ess-tab-complete-in-script t "TAB should complete.")
   (inferior-R-program-name "c:/Program Files/R/R-3.6.2/bin/x64/Rterm.exe")
   (ess-style 'RStudio)
-  (ess-use-company t "ESS company")
-
+  ;; (ess-use-company t "ESS company")
+  (ess-use-auto-complete 'script-only "use auto-complete instead of company")
+  
   :config
   ;; Must-haves for ESS
   ;; http://www.emacswiki.org/emacs/CategoryESS
