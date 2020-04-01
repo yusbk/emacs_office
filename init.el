@@ -1826,11 +1826,35 @@ Version 2017-09-01"
 
 
 (use-package projectile
-  :defer 5
+  :defer 2
   :ensure ripgrep ;; required by projectile-ripgrep
+  :ensure hydra
   :bind-keymap
   ("C-c p" . projectile-command-map)
-  :bind* (("C-c p f" . 'projectile-find-file))
+  ;; :bind* (("C-c p f" . 'projectile-find-file))
+  :bind (:map projectile-command-map
+              ("h" . hydra-projectile/body))
+  :init
+  ;; Simple Hydra projectile
+  (defhydra hydra-projectile (:color teal
+                                     :columns 4)
+    "PROJECTILE"
+    ("f"   projectile-find-file                "Find File")
+    ("r"   projectile-recentf                  "Recent Files")
+    ("z"   projectile-cache-current-file       "Cache Current File")
+    ("x"   projectile-remove-known-project     "Remove Known Project")
+
+    ("d"   projectile-find-dir                 "Find Directory")
+    ("b"   projectile-switch-to-buffer         "Switch to Buffer")
+    ("c"   projectile-invalidate-cache         "Clear Cache")
+    ("X"   projectile-cleanup-known-projects   "Cleanup Known Projects")
+
+    ("o"   projectile-multi-occur              "Multi Occur")
+    ("s"   projectile-switch-project           "Switch Project")
+    ("p"   counsel-switch-project              "Switch Project counsel"  )
+    ("k"   projectile-kill-buffers             "Kill Buffers")
+    ("q"   nil "Cancel" :color blue))
+
   :config
   ;; ;; Where my projects and clones are normally placed.
   ;; (setq projectile-project-search-path '("~/projects")
@@ -1850,7 +1874,7 @@ Version 2017-09-01"
                         ("g" magit-status "magit")
                         ("s" (lambda (a) (setq default-directory a) (counsel-git-grep)) "git grep"))
               :caller 'counsel-switch-project))
-  (bind-key* "C-c p p" 'counsel-switch-project)
+  ;; (bind-key* "C-c p p" 'counsel-switch-project)
   )
 
 (use-package eyebrowse
