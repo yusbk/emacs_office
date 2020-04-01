@@ -24,10 +24,6 @@
                                     gc-cons-percentage 0.1)
                               (garbage-collect)) t)
 
-
-
-
-
 ;;;;  package.el
 ;;; so package-list-packages includes them
 (require 'package)
@@ -2099,15 +2095,31 @@ Version 2017-09-01"
 (use-package auto-complete
   :defer 3
   :hook
-  (ess-mode . auto-complete-mode)
-  :bind(:map my-search-map
-             ("C" . auto-complete-mode))
+  ((ess-mode inferior-ess-mode) . auto-complete-mode)
+  ;; Bind globally
+  :bind* ("M-/" . auto-complete)
+  :bind(
+        :map my-search-map
+        ("C" . auto-complete-mode)
+
+        :map ac-mode-map
+        ("C-i" . auto-complete)
+
+        :map ac-completing-map
+        ("C-n" . ac-next)
+        ("C-p" . ac-previous)
+        ("M-h" . ac-quick-help)
+        )
+  :custom
+  (ac-use-quick-help 'nil "Stop auto help open browser")
+  (ac-auto-start 'nil "Don't start automatically")
   ) 
 
 (use-package company
   :defer 3
   :ensure company-quickhelp ; Show short documentation at point
   :ensure company-shell
+  :hook ((text-mode org-mode) . company-mode)
   :bind (
          :map company-active-map
          ("C-c ?" . company-quickhelp-manual-begin)
@@ -2800,6 +2812,7 @@ In that case, insert the number."
               ("C-S-<up>" . ess-readline) ;previous command from script
               ("M--" . ess-cycle-assign)
               ("M-q" . ess-interrupt)
+
               )
 
   :custom
