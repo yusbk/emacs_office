@@ -2074,8 +2074,11 @@ Version 2017-09-01"
 (use-package csv-mode
   :ensure t
   :mode "\\.csv$"
-  :init
-  (setq csv-separators '(";"))
+  :custom
+  (csv-separators '(";") "Specify seperator")
+
+  ;; ;; If needs more seperators
+  ;; (setq csv-separators '(";" ","))
   )
 
 
