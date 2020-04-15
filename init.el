@@ -24,6 +24,10 @@
                                     gc-cons-percentage 0.1)
                               (garbage-collect)) t)
 
+
+
+
+
 ;;;;  package.el
 ;;; so package-list-packages includes them
 (require 'package)
@@ -1824,33 +1828,12 @@ Version 2017-09-01"
 (use-package projectile
   :defer 2
   :ensure ripgrep ;; required by projectile-ripgrep
-  :ensure hydra
   :bind-keymap
   ("C-c p" . projectile-command-map)
   ;; :bind* (("C-c p f" . 'projectile-find-file))
   :bind (:map projectile-command-map
-              ("h" . hydra-projectile/body))
-  :init
-  ;; Simple Hydra projectile
-  (defhydra hydra-projectile (:color teal
-                                     :columns 4)
-    "PROJECTILE"
-    ("f"   projectile-find-file                "Find File")
-    ("r"   projectile-recentf                  "Recent Files")
-    ("z"   projectile-cache-current-file       "Cache Current File")
-    ("x"   projectile-remove-known-project     "Remove Known Project")
-
-    ("d"   projectile-find-dir                 "Find Directory")
-    ("b"   projectile-switch-to-buffer         "Switch to Buffer")
-    ("c"   projectile-invalidate-cache         "Clear Cache")
-    ("X"   projectile-cleanup-known-projects   "Cleanup Known Projects")
-
-    ("o"   projectile-multi-occur              "Multi Occur")
-    ("s"   projectile-switch-project           "Switch Project")
-    ("p"   counsel-switch-project              "Switch Project counsel"  )
-    ("k"   projectile-kill-buffers             "Kill Buffers")
-    ("q"   nil "Cancel" :color blue))
-
+              ("f" . projectile-find-file)
+              ("p" . counsel-switch-project))
   :config
   ;; ;; Where my projects and clones are normally placed.
   ;; (setq projectile-project-search-path '("~/projects")
@@ -1872,6 +1855,17 @@ Version 2017-09-01"
               :caller 'counsel-switch-project))
   ;; (bind-key* "C-c p p" 'counsel-switch-project)
   )
+
+;;integrerer ivy i projectile
+(use-package counsel-projectile
+  :ensure t
+  :after projectile
+  :defer 3
+  :config
+  (counsel-projectile-mode 1))
+
+(setq projectile-completion-system 'ivy)
+
 
 (use-package eyebrowse
   :defer 2
@@ -2007,25 +2001,79 @@ Version 2017-09-01"
 (use-package smartparens
   :ensure t
   :defer 2
-  :bind (:map smartparens-mode-map
-              ("M-("           . sp-wrap-round)
-              ("M-["           . sp-wrap-square)
-              ("M-{"           . sp-wrap-curly)
-              ("M-<backspace>" . sp-backward-unwrap-sexp)
-              ("M-<del>"       . sp-unwrap-sexp)
-              ("C-<right>"     . sp-forward-slurp-sexp)
-              ("C-<left>"      . sp-backward-slurp-sexp)
-              ("C-M-<right>"   . sp-forward-barf-sexp)
-              ("C-M-<left>"    . sp-backward-barf-sexp)
-              ("C-M-a"         . sp-beginning-of-sexp)
-              ("C-M-e"         . sp-end-of-sexp)
-              ("C-M-k"         . sp-kill-sexp)
-              :map my-personal-map
-              ("a" . sp-beginning-of-sexp)
-              ("e" . sp-end-of-sexp)
-              ("u" . sp-unwrap-sexp) ;sama seperti sp-splice-sexp
-              ("k" . sp-kill-sexp)
-              )
+  :bind (("<f3>" . hydra-smartparens/body)
+         :map smartparens-mode-map
+         ("M-("           . sp-wrap-round)
+         ("M-["           . sp-wrap-square)
+         ("M-{"           . sp-wrap-curly)
+         ("M-<backspace>" . sp-backward-unwrap-sexp)
+         ("M-<del>"       . sp-unwrap-sexp)
+         ("C-<right>"     . sp-forward-slurp-sexp)
+         ("C-<left>"      . sp-backward-slurp-sexp)
+         ("C-M-<right>"   . sp-forward-barf-sexp)
+         ("C-M-<left>"    . sp-backward-barf-sexp)
+         ("C-M-a"         . sp-beginning-of-sexp)
+         ("C-M-z"         . sp-end-of-sexp)
+         ("C-M-k"         . sp-kill-sexp)
+         :map my-personal-map
+         ("a" . sp-beginning-of-sexp)
+         ("e" . sp-end-of-sexp)
+         ("u" . sp-unwrap-sexp) ;sama seperti sp-splice-sexp
+         ("k" . sp-kill-sexp)
+         )
+  :init
+  (defhydra hydra-smartparens (:hint nil)
+    "
+ Moving^^^^                       Slurp & Barf^^   Wrapping^^            Sexp juggling^^^^               Destructive
+------------------------------------------------------------------------------------------------------------------------
+ [_a_] beginning  [_n_] down      [_h_] bw slurp   [_R_]   rewrap        [_S_] split   [_t_] transpose   [_c_] change inner  [_w_] copy
+ [_e_] end        [_N_] bw down   [_H_] bw barf    [_u_]   unwrap        [_s_] splice  [_A_] absorb      [_C_] change outer
+ [_f_] forward    [_p_] up        [_l_] slurp      [_U_]   bw unwrap     [_r_] raise   [_E_] emit        [_k_] kill          [_g_] quit
+ [_b_] backward   [_P_] bw up     [_L_] barf       [_(__{__[_] wrap (){}[]   [_j_] join    [_o_] convolute   [_K_] bw kill       [_q_] quit"
+    ;; Moving
+    ("a" sp-beginning-of-sexp)
+    ("e" sp-end-of-sexp)
+    ("f" sp-forward-sexp)
+    ("b" sp-backward-sexp)
+    ("n" sp-down-sexp)
+    ("N" sp-backward-down-sexp)
+    ("p" sp-up-sexp)
+    ("P" sp-backward-up-sexp)
+    
+    ;; Slurping & barfing
+    ("h" sp-backward-slurp-sexp)
+    ("H" sp-backward-barf-sexp)
+    ("l" sp-forward-slurp-sexp)
+    ("L" sp-forward-barf-sexp)
+    
+    ;; Wrapping
+    ("R" sp-rewrap-sexp)
+    ("u" sp-unwrap-sexp)
+    ("U" sp-backward-unwrap-sexp)
+    ("(" sp-wrap-round)
+    ("{" sp-wrap-curly)
+    ("[" sp-wrap-square)
+    
+    ;; Sexp juggling
+    ("S" sp-split-sexp)
+    ("s" sp-splice-sexp)
+    ("r" sp-raise-sexp)
+    ("j" sp-join-sexp)
+    ("t" sp-transpose-sexp)
+    ("A" sp-absorb-sexp)
+    ("E" sp-emit-sexp)
+    ("o" sp-convolute-sexp)
+    
+    ;; Destructive editing
+    ("c" sp-change-inner :exit t)
+    ("C" sp-change-enclosing :exit t)
+    ("k" sp-kill-sexp)
+    ("K" sp-backward-kill-sexp)
+    ("w" sp-copy-sexp)
+
+    ("q" nil)
+    ("g" nil))
+  
   :config
   (require 'smartparens-config)
   (setq sp-show-pair-from-inside t)
@@ -2074,11 +2122,8 @@ Version 2017-09-01"
 (use-package csv-mode
   :ensure t
   :mode "\\.csv$"
-  :custom
-  (csv-separators '(";") "Specify seperator")
-
-  ;; ;; If needs more seperators
-  ;; (setq csv-separators '(";" ","))
+  :init
+  (setq csv-separators '(";"))
   )
 
 
@@ -2098,31 +2143,17 @@ Version 2017-09-01"
 (use-package auto-complete
   :defer 3
   :hook
-  ((ess-mode inferior-ess-mode) . auto-complete-mode)
-  ;; Bind globally
-  :bind* ("M-/" . auto-complete)
-  :bind(
-        :map my-search-map
-        ("C" . auto-complete-mode)
-
-        :map ac-mode-map
-        ("C-i" . auto-complete)
-
-        :map ac-completing-map
-        ("C-n" . ac-next)
-        ("C-p" . ac-previous)
-        ("M-h" . ac-quick-help)
-        )
+  (ess-mode . auto-complete-mode)
+  :bind(:map my-search-map
+             ("C" . auto-complete-mode))
   :custom
-  (ac-use-quick-help 'nil "Stop auto help open browser")
-  (ac-auto-start 'nil "Don't start automatically")
+  (ac-use-quick-help 'nil)
   ) 
 
 (use-package company
   :defer 3
   :ensure company-quickhelp ; Show short documentation at point
   :ensure company-shell
-  :hook ((text-mode org-mode) . company-mode)
   :bind (
          :map company-active-map
          ("C-c ?" . company-quickhelp-manual-begin)
@@ -2815,7 +2846,6 @@ In that case, insert the number."
               ("C-S-<up>" . ess-readline) ;previous command from script
               ("M--" . ess-cycle-assign)
               ("M-q" . ess-interrupt)
-
               )
 
   :custom
