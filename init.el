@@ -2851,7 +2851,7 @@ In that case, insert the number."
   :custom
   (ess-plain-first-buffername nil "Name first R process R:1")
   (ess-tab-complete-in-script t "TAB should complete.")
-  (inferior-R-program-name "c:/Program Files/R/R-3.6.2/bin/x64/Rterm.exe")
+  (inferior-R-program-name "c:/Program Files/R/R-3.6.3/bin/x64/Rterm.exe")
   (ess-style 'RStudio)
   ;; (ess-use-company t "ESS company")
   (ess-use-auto-complete 'script-only "use auto-complete instead of company")
