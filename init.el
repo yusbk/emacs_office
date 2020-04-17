@@ -115,8 +115,8 @@
 
 ;;; Personal keybindings
 ;; Personal map activate as early as possible
-(unbind-key "C-p")
-(bind-keys :prefix "C-p"
+(unbind-key [f12])
+(bind-keys :prefix [f12]
            :prefix-map my-personal-map)
 
 ;; (bind-keys :prefix "C-c c"
@@ -2142,12 +2142,21 @@ Version 2017-09-01"
 ;;;; Auto-completion
 (use-package auto-complete
   :defer 3
-  :hook
-  (ess-mode . auto-complete-mode)
-  :bind(:map my-search-map
-             ("C" . auto-complete-mode))
+  :hook (inferior-ess-r-mode . auto-complete-mode)
+  :bind (:map ac-complete-mode-map
+              ("C-n" . ac-next)
+              ("C-p" . ac-previous)
+              ([?\t] . ac-expand)
+              ([?\r] . ac-complete)
+              :map my-search-map
+              ("C" . auto-complete-mode)
+              )
   :custom
   (ac-use-quick-help 'nil)
+  (ac-auto-start 3 "Start after 3 letters")
+  (ac-dwim t "Do what I mean")
+  (ac-candidate-limit 5 "Number of candidates to show")
+  (ac-menu-height 5 "Height of candidate menu")
   ) 
 
 (use-package company
@@ -2815,6 +2824,14 @@ In that case, insert the number."
                ;; inferior buffers. Use it to switch to the R script (like C-c
                ;; C-z):
                ("C-z" . ess-switch-to-inferior-or-script-buffer)))
+  :config
+  (defun ess-company-stop-hook ()
+    "Disabled company in inferior ess."
+    (interactive)
+    (company-mode -1))
+  (add-hook 'inferior-ess-mode-hook 'ess-company-stop-hook)
+  ;; Alternative
+  ;; (setq company-global-modes '(not inferior-ess-mode))
   )
 
 (use-package ess-r-mode
@@ -2830,23 +2847,25 @@ In that case, insert the number."
   (unless (file-exists-p ybk/r-dir)
     (make-directory ybk/r-dir t))
 
-  :bind (:map ess-r-mode-map
-              ("M--" . ess-cycle-assign)
-              ;; ("M--" . ess-insert-assign)
-              ("C-c +" . my-add-column)
-              ("C-c ," . my-add-match)
-              ("C-c \\" . my-add-pipe)
-              ("M-|" . my-ess-eval-pipe-through-line)
-              ("C-S-<return>" . ess-eval-region-or-function-or-paragraph-and-step)
-              ("C-." . ess-eval-paragraph-and-step)
-              ("M-." . ess-eval-paragraph-and-go)
-              ("C-S-<tab>" . ess-indent-region-with-styler)
-              
-              :map inferior-ess-r-mode-map
-              ("C-S-<up>" . ess-readline) ;previous command from script
-              ("M--" . ess-cycle-assign)
-              ("M-q" . ess-interrupt)
-              )
+  :bind (("C-c d" . ess-r-package-dev-map)
+         ("C-c +" . my-add-column)
+         ("C-c ," . my-add-match)
+         :map ess-r-mode-map
+         ("M--" . ess-cycle-assign)
+         ;; ("C-c +" . my-add-column)
+         ;; ("C-c ," . my-add-match)
+         ("C-c \\" . my-add-pipe)
+         ("M-|" . my-ess-eval-pipe-through-line)
+         ("C-S-<return>" . ess-eval-region-or-function-or-paragraph-and-step)
+         ("C-." . ess-eval-paragraph-and-step)
+         ("M-." . ess-eval-paragraph-and-go)
+         ("C-S-<tab>" . ess-indent-region-with-styler)
+         
+         :map inferior-ess-r-mode-map
+         ("C-S-<up>" . ess-readline) ;previous command from script
+         ("M--" . ess-cycle-assign)
+         ("M-q" . ess-interrupt)
+         )
 
   :custom
   (ess-plain-first-buffername nil "Name first R process R:1")
