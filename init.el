@@ -139,6 +139,10 @@
 (bind-key "0" 'save-buffers-kill-emacs my-personal-map)
 ;; (define-key my-personal-map (kbd "0") 'save-buffers-kill-emacs)
 
+;; when using emacsclient.exe. Similar to C-x 5 0
+(define-key my-personal-map (kbd "q") 'delete-frame)
+
+
 ;;; Symbolic link and folders
 (use-package my-init
   :ensure nil
@@ -1020,6 +1024,16 @@ output file. %i path(s) are relative, while %o is absolute.")
   )
 
 ;;; Version-control
+
+;;need to specify editor in git terminal with
+;;git config core.editor '"c:/path_to/bin/emacsclient.exe"'
+(use-package with-editor
+  :ensure t
+  :config
+  (add-hook 'shell-mode-hook  'with-editor-export-editor)
+  (add-hook 'term-exec-hook   'with-editor-export-editor)
+  (add-hook 'eshell-mode-hook 'with-editor-export-editor)
+  )
 
 (use-package magit
   :defer 10
