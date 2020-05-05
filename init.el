@@ -1,7 +1,7 @@
 ;;; init.el --- yuskam's config  -*- lexical-binding: t; coding:utf-8; fill-column: 119 -*-
 
 ;;; Commentary:
-;; My personal config. Use `outshine-cycle-buffer' (<S-Tab>) to navigate through sections, and `counsel-imenu' (C-c i)
+;; My personal config. Use `outshine-cycle-buffer' (<S-Tab> or (C-M i)) to navigate through sections, and `counsel-imenu' (C-c i)
 ;; to locate individual use-package definition.
 ;; M-x describe-personal-keybindings to see all personally defined keybindings
 
@@ -343,9 +343,9 @@
 
 
 ;;; General purpose packages
-;; Hide and show the content in this file by pressing S-tab
 (use-package outshine
-  ;; Easier navigation for source code files
+  ;; Hide/show header for easy navigation to give a feel of Org Mode
+  ;; outside Org major-mode. Use <C-M i> or <S-Tab>
   :ensure t
   :defer 3
   :bind (:map outshine-mode-map
@@ -905,7 +905,7 @@ Otherwise, call `delete-blank-lines'."
   :ensure ivy-posframe
   :ensure smex
   :bind (("M-s"     . swiper)
-         ("<f6>"    . ivy-resume) ;C-s C-r
+         ("M-q"    . ivy-resume) ;C-s C-r
          :map my-search-map
          ("a" . counsel-ag)
          ("d" . counsel-dired-jump)
@@ -2437,8 +2437,14 @@ In that case, insert the number."
                          (eshell/alias "d" "dired $1")
                          (eshell/alias "ll" "ls -l")
                          (eshell/alias "la" "ls -al")
-                         (eshell/alias "gp" "c:/Users/ybka/Documents/GitHub")
-                         (eshell/alias "gf" "c:/Users/ybka/Documents/GitFH")
+                         ;;Git things
+                         (eshell/alias "gitp" "c:/Users/ybka/Documents/GitHub")
+                         (eshell/alias "gitf" "c:/Users/ybka/Documents/GitFH")
+                         (eshell/alias "gc" "git checkout $1")
+                         (eshell/alias "gf" "git fetch $1")
+                         (eshell/alias "gm" "git merge $1")
+                         (eshell/alias "gb" "git branch")
+                         (eshell/alias "gw" "git worktree list")
                          ;; (eshell/alias "gp" "cd ~/Git-personal")
                          ;; (eshell/alias "gf" "cd ~/Git-fhi")
                          (eshell/alias "cdc" "cd C:/")
@@ -3336,9 +3342,9 @@ if there is displayed buffer that have shell it will use that window"
   ;; visually distinguish file-visiting windows from other types of windows (like popups or sidebars) by giving them a
   ;; slightly different -- often brighter -- background
   :defer 3
-  :hook
-  ((change-major-mode after-revert ediff-prepare-buffer) . turn-on-solaire-mode)
-  (minibuffer-setup . solaire-mode-in-minibuffer)
+  ;; :hook
+  ;; ((change-major-mode after-revert ediff-prepare-buffer) . turn-on-solaire-mode)
+  ;; (minibuffer-setup . solaire-mode-in-minibuffer)
   :config
   (solaire-mode-swap-bg)
   (solaire-global-mode +1))
