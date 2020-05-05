@@ -2445,6 +2445,7 @@ In that case, insert the number."
                          (eshell/alias "gm" "git merge $1")
                          (eshell/alias "gb" "git branch")
                          (eshell/alias "gw" "git worktree list")
+                         (eshell/alias "gs" "git status")
                          ;; (eshell/alias "gp" "cd ~/Git-personal")
                          ;; (eshell/alias "gf" "cd ~/Git-fhi")
                          (eshell/alias "cdc" "cd C:/")
