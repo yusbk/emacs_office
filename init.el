@@ -120,8 +120,8 @@
 
 
 ;; Early unbind keys for customization
-(unbind-key "M-s") ; Reserve for search related commands
-(bind-keys :prefix "M-s"
+(unbind-key "C-s") ; Reserve for search related commands
+(bind-keys :prefix "C-s"
            :prefix-map my-search-map)
 
 (unbind-key "M-q") ;; Reserve for hydra related commands
@@ -168,6 +168,67 @@
 ;;   (load custom-file))
 (when (file-exists-p custom-file)
   (load custom-file :noerror))
+
+;;; Encoding
+;; Workaround to paste correctly is C-h v buffer-file-encoding-system
+;; to find the current buffer encoding. Then block the whole buffer
+;; M-x recode-region with the current buffer
+
+;; check OS https://karl-voit.at/2017/02/11/my-system-is-foobar/
+(use-package check-my-os
+  :ensure nil
+  :init
+  ;; Check if system is Microsoft Windows
+  (defun my-system-type-is-windows ()
+    "Return true if system is Windows-based (at least up to Win7)"
+    (string-equal system-type "windows-nt")
+    )
+
+  ;; Check if system is GNU/Linux
+  (defun my-system-type-is-gnu ()
+    "Return true if system is GNU/Linux-based"
+    (string-equal system-type "gnu/linux")
+    )
+
+  ;; Check if the hostname is mynotebook
+  (defun my-system-is-mynotebook ()
+    "Return true if the system we are running on is mynotebook"
+    (or
+     (string-equal system-name "ybka")
+     (string-equal system-name "ybka.lan")
+     )
+    )
+
+  ;; Check if the hostname is mydesktop
+  (defun my-system-is-mydesktop ()
+    "Return true if the system we are running on is mydesktop"
+    (or
+     (string-equal system-name "mydesktop")
+     (string-equal system-name "mydesktop.lan")
+     )
+    )
+
+  :config
+  ;; Run check
+  (when (my-system-type-is-windows)
+    (set-clipboard-coding-system 'utf-16-le)
+    (set-selection-coding-system 'utf-16-le)
+    (modify-coding-system-alist 'file "" 'utf-8-unix)
+    )
+  (prefer-coding-system 'utf-8)
+  (set-language-environment 'utf-8-unix)
+  (set-default-coding-systems 'utf-8)
+  (set-terminal-coding-system 'utf-8-unix)
+  (set-keyboard-coding-system 'utf-8-unix)
+  ;; (setq locale-coding-system 'utf-8-unix)
+  )
+
+;; ;; Alternativ to use conditioning depends on OS
+;; (if (eq system-type 'windows-nt)
+;;     (progn
+;;       (set-clipboard-coding-system 'utf-16-le)
+;;       (set-selection-coding-system 'utf-16-le)))
+
 
 ;;; General setup
 (setq-default ;; Use setq-default to define global default
@@ -229,13 +290,6 @@
  ;; Hide warning redefinition
  ad-redefinition-action 'accept
  )
-
-;; Prefer utf8
-(prefer-coding-system 'utf-8-unix)
-(set-language-environment 'utf-8)
-(set-default-coding-systems 'utf-8)
-;; (set-terminal-coding-system 'utf-8)
-;; (set-keyboard-coding-system 'utf-8)
 
 ;; Misc
 (set-frame-name "Emacs the Great")
