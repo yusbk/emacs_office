@@ -34,11 +34,7 @@
 (customize-set-variable 'package-archives
                         `(,@package-archives
                           ("melpa" . "https://melpa.org/packages/")
-                          ;; ("marmalade" . "https://marmalade-repo.org/packages/")
                           ("org" . "https://orgmode.org/elpa/")
-                          ;; ("user42" . "https://download.tuxfamily.org/user42/elpa/packages/")
-                          ;; ("emacswiki" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/emacswiki/")
-                          ;; ("sunrise" . "http://joseito.republika.pl/sunrise-commander/")
                           ))
 (customize-set-variable 'package-enable-at-startup nil)
 (package-initialize)
@@ -62,8 +58,8 @@
 
 (use-package use-package-core
   :custom
-  ;; (use-package-verbose t)
-  ;; (use-package-minimum-reported-time 0.005)
+  (use-package-verbose t)
+  (use-package-minimum-reported-time 0.005)
   (use-package-enable-imenu-support t))
 
 ;; use-package always ensure
@@ -124,30 +120,29 @@
 
 
 ;; Early unbind keys for customization
-(unbind-key "C-s") ; Reserve for search related commands
-(bind-keys :prefix "C-s"
+(unbind-key "M-s") ; Reserve for search related commands
+(bind-keys :prefix "M-s"
            :prefix-map my-search-map)
 
-(unbind-key "C-q") ;; Reserve for hydra related commands
-(bind-keys :prefix "C-q"
+(unbind-key "M-q") ;; Reserve for hydra related commands
+(bind-keys :prefix "M-q"
            :prefix-map my-assist-map)
 
 
 ;; C-x C-c is originally bound to kill emacs. I accidentally type this
 ;; from time to time which is super-frustrating.  Get rid of it:
 (unbind-key "C-x C-c")
-(bind-key "0" 'save-buffers-kill-emacs my-personal-map)
-;; (define-key my-personal-map (kbd "0") 'save-buffers-kill-emacs)
-
-;; when using emacsclient.exe. Similar to C-x 5 0
-(define-key my-personal-map (kbd "q") 'delete-frame)
 
 
 ;;; Symbolic link and folders
-(use-package my-init
+(use-package my-personal-choices
+  ;; add some general keys to my-personal-map
   :ensure nil
   :bind (:map my-personal-map
-              ("y" . my-init-file))
+              ("y" . my-init-file)
+              ("0" . save-buffers-kill-emacs)
+              ("q" . delete-frame) ;C-x 5 0
+              ) 
   :init
   (defun my-init-file ()
     "Open my emacs init.el file"
@@ -890,10 +885,12 @@ Otherwise, call `delete-blank-lines'."
 ;;;; Find-replace
 (use-package xah-find
   ;; find text from all files in a folder
-  :bind (("C-s w" . xah-find-text)
-         ("C-s o" . xah-find-replace-text)
-         ("C-s e" . xah-find-text-regex)
-         ("C-s k" . xah-find-count))
+  :bind (
+         :map my-search-map
+         ("w" . xah-find-text)
+         ("o" . xah-find-replace-text)
+         ("e" . xah-find-text-regex)
+         ("k" . xah-find-count))
   )
 
 (use-package counsel
@@ -904,9 +901,10 @@ Otherwise, call `delete-blank-lines'."
   :ensure counsel-projectile
   :ensure ivy-posframe
   :ensure smex
-  :bind (("M-s"     . swiper)
-         ("M-q"    . ivy-resume) ;C-s C-r
+  :bind (
          :map my-search-map
+         ("s" . swiper)
+         ("c" . ivy-resume) ;continue C-s C-r
          ("a" . counsel-ag)
          ("d" . counsel-dired-jump)
          ("f" . counsel-find-file)
@@ -915,10 +913,10 @@ Otherwise, call `delete-blank-lines'."
          ("j" . counsel-file-jump)
          ("l" . counsel-find-library)
          ("r" . counsel-recentf)
-         ("s" . counsel-locate)
+         ("S" . counsel-locate)
          ("u" . counsel-unicode-char)
          ("v" . counsel-set-variable)
-         ("C-r" . ivy-resume))
+         )
 
   :init
   (setq ivy-rich--display-transformers-list
@@ -1297,85 +1295,6 @@ three ediff buffers (A, B, and C)."
   (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
   )
 
-;; (use-package magit
-;;   :defer 10
-;;   ;;:ensure gitignore-templates
-;;   :ensure diff-hl
-;;   :ensure git-timemachine
-;;   ;;display flycheck errors only on added/modified lines
-;;   :ensure magit-todos
-;;   :ensure ediff
-;;   :ensure magit-diff-flycheck
-;;   ;; use M-x v for vc-prefix-map
-;;   :bind (:map vc-prefix-map
-;;               ("s" . 'git-gutter:stage-hunk)
-;;               ("c" . 'magit-clone))
-;;   :bind (("C-x v r" . 'diff-hl-revert-hunk)
-;;          ("C-x v n" . 'diff-hl-next-hunk)
-;;          ("C-x v p" . 'diff-hl-previous-hunk))
-;;   :bind (("C-x M-g" . 'magit-dispatch-popup)
-;;          ("C-x g" . magit-status)
-;;          ("C-x G" . magit-dispatch))
-;;   :config
-;;   ;; Enable magit-file-mode, to enable operations that touches a file, such as log, blame
-;;   (global-magit-file-mode)
-
-;;   ;; Prettier looks, and provides dired diffs
-;;   (use-package diff-hl
-;;     :defer 3
-;;     :commands (diff-hl-mode diff-hl-dired-mode)
-;;     :hook (magit-post-refresh . diff-hl-magit-post-refresh)
-;;     :hook (dired-mode . diff-hl-dired-mode)
-;;     )
-
-;;   ;; Provides stage hunk at buffer, more useful
-;;   (use-package git-gutter
-;;     :defer 3
-;;     :commands (git-gutter:stage-hunk)
-;;     :bind (:map vc-prefix-map
-;;                 ("s" . 'git-gutter:stage-hunk))
-;;     )
-
-;;   ;; Someone says this will make magit on Windows faster.
-;;   (setq w32-pipe-read-delay 0)
-
-;;   (set-default 'magit-push-always-verify nil)
-;;   (set-default 'magit-revert-buffers 'silent)
-;;   (set-default 'magit-no-confirm '(stage-all-changes
-;;                                    unstage-all-changes))
-;;   (set-default 'magit-diff-refine-hunk t)
-;;   ;; change default display behavior
-;;   (setq magit-completing-read-function 'ivy-completing-read
-;;         magit-display-buffer-function 'magit-display-buffer-same-window-except-diff-v1
-;;         magit-clone-set-remote.pushDefault nil
-;;         magit-clone-default-directory "~/projects/")
-
-;;   (defun magit-status-with-prefix ()
-;;     (interactive)
-;;     (let ((current-prefix-arg '(4)))
-;;       (call-interactively 'magit-status)))
-
-;;   ;; Set magit password authentication source to auth-source
-;;   (add-to-list 'magit-process-find-password-functions
-;;                'magit-process-password-auth-source)
-
-;;   ;; Useful functions copied from
-;;   ;; https://stackoverflow.com/questions/9656311/conflict-resolution-with-emacs-ediff-how-can-i-take-the-changes-of-both-version/29757750#29757750
-;;   ;; Combined with ~ to swap the order of the buffers you can get A then B or B then A
-;;   (defun ediff-copy-both-to-C ()
-;;     (interactive)
-;;     (ediff-copy-diff ediff-current-difference nil 'C nil
-;;                      (concat
-;;                       (ediff-get-region-contents ediff-current-difference 'A ediff-control-buffer)
-;;                       (ediff-get-region-contents ediff-current-difference 'B ediff-control-buffer))))
-;;   (defun add-d-to-ediff-mode-map () (define-key ediff-mode-map "d" 'ediff-copy-both-to-C))
-;;   (add-hook 'ediff-keymap-setup-hook 'add-d-to-ediff-mode-map)
-
-;;   ;; Always expand file in ediff
-;;   (add-hook 'ediff-prepare-buffer-hook #'show-all)
-;;   ;; Do everything in one frame
-;;   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
-;;   )
 
 ;;; Window and Buffer management
 (use-package windmove
@@ -1569,158 +1488,6 @@ With ARG, swap them instead."
 
 
 ;;; Navigation
-;;;; Find-replace
-(use-package xah-find
-  ;; find text from all files in a folder
-  :bind (("C-s w" . xah-find-text)
-         ("C-s o" . xah-find-replace-text)
-         ("C-s e" . xah-find-text-regex)
-         ("C-s k" . xah-find-count))
-  )
-
-;;;; Ivy / Swiper / Counsel
-;; (use-package ivy
-;;   :bind
-;;   ("C-M-z" . ivy-resume)
-;;   ([remap list-buffers] . ivy-switch-buffer)
-;;   :config
-;;   (setq ivy-count-format "(%d/%d) ")
-;;   (setq ivy-use-virtual-buffers t)
-;;   (setq ivy-extra-directories '("./"))
-;;   (dolist (fun '(org-refile org-agenda-refile org-capture-refile))
-;;     (setq ivy-initial-inputs-alist
-;;           (delete `(,fun . "^") ivy-initial-inputs-alist)))
-;;   (ivy-mode))
-
-;; (use-package counsel
-;;   ;; specifying counsel will bring ivy and swiper as dependencies
-;;   :demand t
-;;   :ensure ivy-hydra
-;;   :ensure ivy-rich
-;;   :ensure counsel-projectile
-;;   :ensure ivy-posframe
-;;   :ensure smex
-;;   :bind (("M-s"     . swiper)
-;;          ("<f6>"    . ivy-resume) ;C-s C-r
-;;          :map my-search-map
-;;          ("a" . counsel-ag)
-;;          ("d" . counsel-dired-jump)
-;;          ("f" . counsel-find-file)
-;;          ("g" . counsel-git-grep)
-;;          ("i" . counsel-imenu)
-;;          ("j" . counsel-file-jump)
-;;          ("l" . counsel-find-library)
-;;          ("r" . counsel-recentf)
-;;          ("s" . counsel-locate)
-;;          ("u" . counsel-unicode-char)
-;;          ("v" . counsel-set-variable)
-;;          ("C-r" . ivy-resume))
-;;   :init
-;;   (setq ivy-rich--display-transformers-list
-;;         '(ivy-switch-buffer
-;;           (:columns
-;;            ((ivy-rich-candidate (:width 50))  ; return the candidate itself
-;;             (ivy-rich-switch-buffer-size (:width 7))  ; return the buffer size
-;;             (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right)); return the buffer indicators
-;;             (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))          ; return the major mode info
-;;             (ivy-rich-switch-buffer-project (:width 15 :face success))             ; return project name using `projectile'
-;;             (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))  ; return file path relative to project root or `default-directory' if project is nil
-;;            :predicate
-;;            (lambda (cand) (get-buffer cand)))
-;;           counsel-M-x
-;;           (:columns
-;;            ((counsel-M-x-transformer (:width 40))  ; thr original transformer
-;;             (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))  ; return the docstring of the command
-;;           counsel-describe-function
-;;           (:columns
-;;            ((counsel-describe-function-transformer (:width 40))  ; the original transformer
-;;             (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))  ; return the docstring of the function
-;;           counsel-describe-variable
-;;           (:columns
-;;            ((counsel-describe-variable-transformer (:width 40))  ; the original transformer
-;;             (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))  ; return the docstring of the variable
-;;           counsel-recentf
-;;           (:columns
-;;            ((ivy-rich-candidate (:width 0.8)) ; return the candidate itself
-;;             (ivy-rich-file-last-modified-time (:face font-lock-comment-face)))))) ; return the last modified time of the file
-;;   :config
-;;   (ivy-mode 1)
-;;   (ivy-rich-mode 1)
-;;   (counsel-mode 1)
-;;   (minibuffer-depth-indicate-mode 1)
-;;   (counsel-projectile-mode 1)
-;;   ;; (setq smex-save-file (expand-file-name "smex-items" my-private-conf-directory))
-;;   (setq ivy-height 10
-;;         ivy-fixed-height-minibuffer t
-;;         ivy-use-virtual-buffers t ;; show recent files as buffers in C-x b
-;;         ivy-use-selectable-prompt t ;; C-M-j to rename similar filenames
-;;         enable-recursive-minibuffers t
-;;         ivy-re-builders-alist '((t . ivy--regex-plus))
-;;         ivy-count-format "(%d/%d) "
-;;         ;; Useful settings for long action lists
-;;         ;; See https://github.com/tmalsburg/helm-bibtex/issues/275#issuecomment-452572909
-;;         max-mini-window-height 0.30
-;;         ;; Don't parse remote files
-;;         ivy-rich-parse-remote-buffer 'nil
-;;         )
-;;   (defvar dired-compress-files-alist
-;;     '(("\\.tar\\.gz\\'" . "tar -c %i | gzip -c9 > %o")
-;;       ("\\.zip\\'" . "zip %o -r --filesync %i"))
-;;     "Control the compression shell command for `dired-do-compress-to'.
-;; Each element is (REGEXP . CMD), where REGEXP is the name of the
-;; archive to which you want to compress, and CMD the the
-;; corresponding command.
-;; Within CMD, %i denotes the input file(s), and %o denotes the
-;; output file. %i path(s) are relative, while %o is absolute.")
-
-;;   ;; Offer to create parent directories if they do not exist
-;;   ;; http://iqbalansari.github.io/blog/2014/12/07/automatically-create-parent-directories-on-visiting-a-new-file-in-emacs/
-;;   (defun my-create-non-existent-directory ()
-;;     (let ((parent-directory (file-name-directory buffer-file-name)))
-;;       (when (and (not (file-exists-p parent-directory))
-;;                  (y-or-n-p (format "Directory `%s' does not exist! Create it?" parent-directory)))
-;;         (make-directory parent-directory t))))
-;;   (add-to-list 'find-file-not-found-functions 'my-create-non-existent-directory)
-
-;;   ;; search in current file directory
-;;   (setq counsel-find-file-at-point t)
-;;   ;; ignore . files or temporary files
-;;   (setq counsel-find-file-ignore-regexp
-;;         (concat
-;;          ;; File names beginning with # or .
-;;          "\\(?:\\`[#.]\\)"
-;;          ;; File names ending with # or ~
-;;          "\\|\\(?:\\`.+?[#~]\\'\\)"))
-
-;;   ;; Kill virtual buffer too
-;;   ;; https://emacs.stackexchange.com/questions/36836/how-to-remove-files-from-recentf-ivy-virtual-buffers
-;;   (defun my-ivy-kill-buffer (buf)
-;;     (interactive)
-;;     (if (get-buffer buf)
-;;         (kill-buffer buf)
-;;       (setq recentf-list (delete (cdr (assoc buf ivy--virtual-buffers)) recentf-list))))
-
-;;   (ivy-set-actions 'ivy-switch-buffer
-;;                    '(("k" (lambda (x)
-;;                             (my-ivy-kill-buffer x)
-;;                             (ivy--reset-state ivy-last))  "kill")
-;;                      ("j" switch-to-buffer-other-window "other window")
-;;                      ("x" browse-file-directory "open externally")
-;;                      ))
-
-;;   (ivy-set-actions 'counsel-find-file
-;;                    '(("j" find-file-other-window "other window")
-;;                      ("b" counsel-find-file-cd-bookmark-action "cd bookmark")
-;;                      ("x" counsel-find-file-extern "open externally")
-;;                      ("d" delete-file "delete")
-;;                      ("g" magit-status-internal "magit status")
-;;                      ("r" counsel-find-file-as-root "open as root")))
-;;   ;; display at `ivy-posframe-style'
-;;   (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-point)))
-;;   ;; (ivy-posframe-mode 1)
-;;   )
-
-
 ;;;; Register
 (use-package register
   :ensure nil
@@ -2015,7 +1782,9 @@ Version 2017-09-01"
 (use-package smartparens
   :ensure t
   :defer 2
-  :bind (("<f3>" . hydra-smartparens/body)
+  :bind (
+         :map my-assist-map
+         ("p" . hydra-smartparens/body)
          :map smartparens-mode-map
          ("M-("           . sp-wrap-round)
          ("M-["           . sp-wrap-square)
@@ -2443,7 +2212,7 @@ In that case, insert the number."
                          (eshell/alias "gc" "git checkout $1")
                          (eshell/alias "gf" "git fetch $1")
                          (eshell/alias "gm" "git merge $1")
-                         (eshell/alias "gb" "git branch")
+                         (eshell/alias "gb" "git branch $1")
                          (eshell/alias "gw" "git worktree list")
                          (eshell/alias "gs" "git status")
                          ;; (eshell/alias "gp" "cd ~/Git-personal")
@@ -2885,7 +2654,7 @@ In that case, insert the number."
          :map inferior-ess-r-mode-map
          ("C-S-<up>" . ess-readline) ;previous command from script
          ("M--" . ess-cycle-assign)
-         ("M-q" . ess-interrupt)
+         ("M-Q" . ess-interrupt)
          )
 
   :custom
