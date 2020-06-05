@@ -124,8 +124,8 @@
 (bind-keys :prefix "C-s"
            :prefix-map my-search-map)
 
-(unbind-key "M-q") ;; Reserve for hydra related commands
-(bind-keys :prefix "M-q"
+(unbind-key [f9]) ;; Reserve for hydra related commands
+(bind-keys :prefix [f9]
            :prefix-map my-assist-map)
 
 
@@ -173,6 +173,7 @@
 ;; Workaround to paste correctly is C-h v buffer-file-encoding-system
 ;; to find the current buffer encoding. Then block the whole buffer
 ;; M-x recode-region with the current buffer
+;; or add on top of file -*- coding: utf-8 -*-
 
 ;; check OS https://karl-voit.at/2017/02/11/my-system-is-foobar/
 (use-package check-my-os
@@ -564,12 +565,15 @@ Version 2017-09-01"
 (use-package crux
   ;; A handful of useful functions
   :defer 1
-  :bind (
+  :bind (("C-a" . crux-move-beginning-of-line)
+         ("C-k" . crux-smart-kill-line) ;first kill end of line then kill whole line
          ("C-x t"         . 'crux-swap-windows)
          ("C-c b"         . 'crux-create-scratch-buffer)
          ("C-x o"         . 'crux-open-with)
          ;; ("C-x f"         . 'crux-recentf-find-file) ;C-s f counsel-recent-file
          ;; ("C-x 4 t"       . 'crux-transpose-windows)
+         ("C-c r" . crux-rename-file-and-buffer) ;rename current buffer
+         ("C-c k" . crux-kill-other-buffers) ;kill all open buffers but not this
          ("C-x C-k"       . 'crux-delete-buffer-and-file)
          ("C-c n"         . 'crux-cleanup-buffer-or-region)
          (:map my-assist-map
@@ -1833,25 +1837,29 @@ Version 2017-09-01"
 ;; Check the great gist at
 ;; https://gist.github.com/pvik/8eb5755cc34da0226e3fc23a320a3c95
 ;; And this tutorial: https://ebzzry.io/en/emacs-pairs/
+;; Example: exp1 (exp2 (exp3)) exp4
 (use-package smartparens
   :ensure t
   :defer 2
-  :bind (
+  :bind (([f8] . hydra-smartparens/body)
          :map my-assist-map
          ("p" . hydra-smartparens/body)
          :map smartparens-mode-map
+         ;; exp1 ((exp2 (exp3)) exp4)
          ("M-("           . sp-wrap-round)
          ("M-["           . sp-wrap-square)
          ("M-{"           . sp-wrap-curly)
-         ("M-<backspace>" . sp-backward-unwrap-sexp)
-         ("M-<del>"       . sp-unwrap-sexp)
-         ("C-<right>"     . sp-forward-slurp-sexp)
-         ("C-<left>"      . sp-backward-slurp-sexp)
-         ("C-M-<right>"   . sp-forward-barf-sexp)
-         ("C-M-<left>"    . sp-backward-barf-sexp)
+         ("M-<backspace>" . sp-backward-unwrap-sexp) ;unwrap outside exp2 when in exp3
+         ("M-<del>"       . sp-unwrap-sexp) ;unwrap exp3 when in exp3 
+         ("C-S-<right>"     . sp-forward-slurp-sexp) ;include exp4 when in exp3
+         ("C-S-<left>"      . sp-backward-slurp-sexp) ;include exp1 when in exp2
+         ("C-M-<right>"   . sp-forward-barf-sexp) ;remove exp4 from ()  
+         ("C-M-<left>"    . sp-backward-barf-sexp) ;remove exp2 from ()
          ("C-M-a"         . sp-beginning-of-sexp)
          ("C-M-z"         . sp-end-of-sexp)
          ("C-M-k"         . sp-kill-sexp)
+         ("C-M-f"         . sp-forward-sexp)
+         ("C-M-b"         . sp-backward-sexp)
          :map my-personal-map
          ("a" . sp-beginning-of-sexp)
          ("e" . sp-end-of-sexp)
@@ -2261,8 +2269,8 @@ In that case, insert the number."
                          (eshell/alias "ll" "ls -l")
                          (eshell/alias "la" "ls -al")
                          ;;Git things
-                         (eshell/alias "gitp" "c:/Users/ybka/Documents/GitHub")
-                         (eshell/alias "gitf" "c:/Users/ybka/Documents/GitFH")
+                         (eshell/alias "gitp" "cd c:/Users/ybka/Documents/GitHub/$1")
+                         (eshell/alias "gitf" "cd c:/Users/ybka/Documents/GitFH/$1")
                          (eshell/alias "gc" "git checkout $1")
                          (eshell/alias "gf" "git fetch $1")
                          (eshell/alias "gm" "git merge $1")
@@ -2272,7 +2280,7 @@ In that case, insert the number."
                          ;; (eshell/alias "gp" "cd ~/Git-personal")
                          ;; (eshell/alias "gf" "cd ~/Git-fhi")
                          (eshell/alias "cdc" "cd C:/")
-                         (eshell/alias "cdy" "c:/Users/ybka") ;personal folder
+                         (eshell/alias "cdy" "cd c:/Users/ybka") ;personal folder
                          (eshell/alias "cd1" "cd c:/Users/ybka/OneDrive - Folkehelseinstituttet/")
                          ;; folkehelseprofil mappen
                          (eshell/alias "cdf" "cd F:/Prosjekter/Kommunehelsa")
@@ -2649,8 +2657,23 @@ In that case, insert the number."
      ("d"          . neotree-delete-node)
      ("r"          . neotree-rename-node)
      ("h"          . neotree-hidden-file-toggle)
-     ("f"          . neotree-refresh))))
+     ("f"          . neotree-refresh)))
+  )
 
+
+(use-package ztree
+  ;;Had diff mode with M-x ztree-diff or ordinary tree with ztree-dir
+  ;; https://github.com/fourier/ztree
+  :ensure t
+  :bind (
+         :map my-personal-map
+         ("z" . ztree-dir)
+         ("Z" . ztree-diff)
+         )
+  :config
+  ;; ignore case and whitespace differences
+  (setq ztree-diff-additional-options '("-w" "-i"))
+  )
 
 ;;; ESS
 ;; C-c general keymap for ESS
@@ -3771,7 +3794,8 @@ See `org-agenda-todo' for more details."
   :ensure org
   :bind*
   (("C-c c" . org-capture)
-   ("<f9>" . ybk/org-task-capture))
+   ;; ("<f9>" . ybk/org-task-capture) ;just use C-c c t
+   )
   :bind
   ((:map org-capture-mode-map
          ("C-c C-j" . my/org-capture-refile-and-jump)))
