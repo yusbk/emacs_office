@@ -141,7 +141,7 @@
   :bind (:map my-personal-map
               ("y" . my-init-file)
               ("0" . save-buffers-kill-emacs)
-              ("q" . delete-frame) ;C-x 5 0
+              ("Q" . delete-frame) ;C-x 5 0
               ) 
   :init
   (defun my-init-file ()
@@ -1127,14 +1127,6 @@ output file. %i path(s) are relative, while %o is absolute.")
     (global-diff-hl-mode)
     )
 
-  ;; Provides stage hunk at buffer, more useful
-  (use-package git-gutter
-    :defer 3
-    :commands (git-gutter:stage-hunk)
-    :bind (:map vc-prefix-map
-                ("s" . 'git-gutter:stage-hunk))
-    )
-
   ;; Someone says this will make magit on Windows faster.
   (setq w32-pipe-read-delay 0)
 
@@ -1255,6 +1247,54 @@ command was called, go to its unstaged changes section."
   (my-magit-log-date-headers-mode 1)
 
   )
+
+
+;; Provides stage hunk at buffer, more useful
+;; (use-package git-gutter
+;;   :defer 3
+;;   :commands (git-gutter:stage-hunk)
+;;   :bind (:map vc-prefix-map
+;;               ("s" . 'git-gutter:stage-hunk))
+;;   )
+
+(use-package git-gutter
+  :ensure t
+  ;; :when window-system
+  :defer t
+  :bind (("C-x P" . git-gutter:popup-hunk)
+         ("C-x p" . git-gutter:previous-hunk)
+         ("C-x n" . git-gutter:next-hunk)
+         ("C-c G" . git-gutter:popup-hunk))
+  :diminish ""
+  :init
+  (add-hook 'prog-mode-hook #'git-gutter-mode)
+  (add-hook 'text-mode-hook #'git-gutter-mode)
+  :config
+  (use-package git-gutter-fringe
+    :ensure t
+    :init
+    (require 'git-gutter-fringe)
+    (when (fboundp 'define-fringe-bitmap)
+      (define-fringe-bitmap 'git-gutter-fr:added
+        [224 224 224 224 224 224 224 224 224 224 224 224 224
+             224 224 224 224 224 224 224 224 224 224 224 224]
+        nil nil 'center)
+      (define-fringe-bitmap 'git-gutter-fr:modified
+        [224 224 224 224 224 224 224 224 224 224 224 224 224
+             224 224 224 224 224 224 224 224 224 224 224 224]
+        nil nil 'center)
+      (define-fringe-bitmap 'git-gutter-fr:deleted
+        [0 0 0 0 0 0 0 0 0 0 0 0 0 128 192 224 240 248]
+        nil nil 'center))))
+
+
+(use-package git-timemachine
+  ;; see file history
+  ;; w copy short hash or W for full hash
+  :bind (:map my-personal-map
+              ("G" . git-timemachine))
+  :ensure t)
+
 
 (use-package smerge-mode
   ;; For comparing conflict better than ediff
@@ -2526,10 +2566,54 @@ In that case, insert the number."
 
 
 ;;; Code folding
-
 (use-package hideshow
-  :bind (:map prog-mode-map
-              ("C-c h" . hs-toggle-hiding)))
+  :bind (("C-c TAB" . hs-toggle-hiding)
+         ;; ("C-c h" . hs-toggle-hiding)
+         ("M-+" . hs-show-all))
+  :init (add-hook #'prog-mode-hook #'hs-minor-mode)
+  :diminish hs-minor-mode
+  :config
+  ;; Automatically open a block if you search for something where it matches
+  (setq hs-isearch-open t)
+  
+  ;; Add `json-mode' and `javascript-mode' to the list
+  (setq hs-special-modes-alist
+        (mapcar 'purecopy
+                '((c-mode "{" "}" "/[*/]" nil nil)
+                  (ess-mode "{" "}" "/(*/)" nil nil)
+                  (c++-mode "{" "}" "/[*/]" nil nil)
+                  (java-mode "{" "}" "/[*/]" nil nil)
+                  (js-mode "{" "}" "/[*/]" nil)
+                  (json-mode "{" "}" "/[*/]" nil)
+                  (javascript-mode  "{" "}" "/[*/]" nil))))
+
+  ;; only show method names and signatures, hiding the bodies
+  (defvar eos/hs-level 2
+    "Default level to hide at when calling
+    `eos/fold-show-only-methods'. This is buffers may set this to
+    be buffer-local.")
+
+  (setq eos/hs-fold-show-only-methods-active-p nil)
+  (defun eos/hs-fold-show-only-methods ()
+    "Toggle between hiding all methods using `eos/hs-level' or
+showing them."
+    (interactive)
+    (save-excursion
+      (if eos/hs-fold-show-only-methods-active-p
+          (progn
+            (hs-show-all)
+            (setq-local eos/hs-fold-show-only-methods-active-p nil))
+        (progn
+          (goto-char (point-min))
+          (hs-hide-level eos/hs-level)
+          (setq-local eos/hs-fold-show-only-methods-active-p t)))))
+
+  (global-set-key (kbd "C-c h") 'eos/hs-fold-show-only-methods)
+  )
+
+;; (use-package hideshow
+;;   :bind (:map prog-mode-map
+;;               ("C-c h" . hs-toggle-hiding)))
 
 (use-package origami
   ;; Code folding
