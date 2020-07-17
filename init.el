@@ -2332,6 +2332,21 @@ In that case, insert the number."
                          (eshell/alias "cdf" "cd F:/Prosjekter/Kommunehelsa")
                          (eshell/alias "cdt" "cd f:/Prosjekter/Kommunehelsa/TESTOMRAADE/TEST_KHFUN")))
   :config
+  
+  ;; Use Cygwin for shell
+  ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
+  ;; When running in Windows, we want to use an alternate shell so we
+  ;; can be more unixy.
+  (setq shell-file-name "C:/cygwin64/bin/bash")
+  (setq explicit-shell-file-name shell-file-name)
+  (setenv "PATH"
+          (concat ".:/usr/local/bin:/usr/bin:/bin:"
+                  (replace-regexp-in-string " " "\\\\ "
+                                            (replace-regexp-in-string "\\\\" "/"
+                                                                      (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
+                                                                                                (getenv "PATH"))))))
+
+  
   (setq eshell-list-files-after-cd t) ;ls after cd
 
   (with-no-warnings
@@ -2575,11 +2590,7 @@ In that case, insert the number."
 (use-package hideshow
   :bind (("C-c TAB" . hs-toggle-hiding)
          ;; ("C-c h" . hs-toggle-hiding)
-         ("M-+" . hs-show-all)
-         :map my-assist-map
-         ("-" . hs-toggle-hiding)
-         ("+" . hs-show-all)
-         )
+         ("M-+" . hs-show-all))
   :init (add-hook #'prog-mode-hook #'hs-minor-mode)
   :diminish hs-minor-mode
   :config
@@ -2829,10 +2840,10 @@ showing them."
          )
 
   :custom
-  ;; (inferior-ess-r-program "c:/Program Files/R/R-4.0.0/bin/R.exe")
-  (inferior-ess-r-program "R")
   (ess-plain-first-buffername nil "Name first R process R:1")
   (ess-tab-complete-in-script t "TAB should complete.")
+  (inferior-R-program-name "c:/Program Files/R/R-4.0.0/bin/x64/Rterm.exe")
+  ;; (inferior-R-program-name "c:/Program Files/R/R-3.6.3/bin/x64/Rterm.exe")
   (ess-style 'RStudio)
   ;; (ess-use-company t "ESS company")
   (ess-use-auto-complete 'script-only "use auto-complete instead of company")
@@ -3357,8 +3368,8 @@ if there is displayed buffer that have shell it will use that window"
 
 
 (use-package all-the-icons
-  :disabled
-  :ensure t)
+  :ensure t
+  :defer 0.5)
 ;; (use-package all-the-icons
 ;;   ;; needed to display icon correctly in doom-modeline
 ;;   :ensure t
