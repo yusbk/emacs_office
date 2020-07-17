@@ -209,5 +209,5 @@ PATH=$PATH:/usr/bin
 PATH=$PATH:`cygpath -S`
 PATH=$PATH:`cygpath -W`
 PATH=$PATH:/cygdrive/c/Program\ Files/Git/bin
-
+PATH=$PATH:/cygdrive/c/Emacs26.3/bin
 
