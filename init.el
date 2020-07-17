@@ -1,5 +1,10 @@
 ;;; init.el --- yuskam's config  -*- lexical-binding: t; coding:utf-8; fill-column: 119 -*-
 
+;; Start server
+(require 'server)
+(unless (server-running-p)
+  (server-start)) 
+
 ;;; Commentary:
 ;; My personal config. Use `outshine-cycle-buffer' (<S-Tab> or (C-M i)) to navigate through sections, and `counsel-imenu' (C-c i)
 ;; to locate individual use-package definition.
@@ -2297,12 +2302,47 @@ In that case, insert the number."
   (dired-clean-confirm-killing-deleted-buffers nil))
 
 
-;;;; Eshell
+;;;; Shell/Eshell
+;; Cygwin
+;; http://www.khngai.com/emacs/cygwin.php
+(use-package cygwin-mount
+  :load-path "~/.emacs.d/lib"
+  :init
+  (setenv "PATH" (concat "c:/cygwin64/bin;" (getenv "PATH")))
+  (setq exec-path (cons "c:/cygwin64/bin/" exec-path))
+  :config
+  (cygwin-mount-activate)
+  )
+
+(use-package setup-cygwin
+  :load-path "~/.emacs.d/lib/")
+
+
 ;; Emacs command shell
 (use-package eshell
   :ensure nil
   :defines eshell-prompt-function
   :functions eshell/alias
+  :init
+  ;; Use Cygwin for shell
+  ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
+  ;; When running in Windows, we want to use an alternate shell so we
+  ;; can be more unixy.
+  (add-hook 'comint-output-filter-functions
+            'shell-strip-ctrl-m nil t)
+  (add-hook 'comint-output-filter-functions
+            'comint-watch-for-password-prompt nil t)
+  
+  (setq shell-file-name "C:/cygwin64/bin/bash")
+  (setq explicit-shell-file-name shell-file-name)
+  (setenv "PATH"
+          (concat ".:/usr/local/bin:/usr/bin:/bin:"
+                  (replace-regexp-in-string " " "\\\\ "
+                                            (replace-regexp-in-string "\\\\" "/"
+                                                                      (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
+                                                                                                (getenv "PATH"))))))
+
+  
   :bind (:map my-personal-map
               ("s" . eshell))
   :hook (eshell-mode . (lambda ()
@@ -2332,20 +2372,6 @@ In that case, insert the number."
                          (eshell/alias "cdf" "cd F:/Prosjekter/Kommunehelsa")
                          (eshell/alias "cdt" "cd f:/Prosjekter/Kommunehelsa/TESTOMRAADE/TEST_KHFUN")))
   :config
-  
-  ;; Use Cygwin for shell
-  ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
-  ;; When running in Windows, we want to use an alternate shell so we
-  ;; can be more unixy.
-  (setq shell-file-name "C:/cygwin64/bin/bash")
-  (setq explicit-shell-file-name shell-file-name)
-  (setenv "PATH"
-          (concat ".:/usr/local/bin:/usr/bin:/bin:"
-                  (replace-regexp-in-string " " "\\\\ "
-                                            (replace-regexp-in-string "\\\\" "/"
-                                                                      (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
-                                                                                                (getenv "PATH"))))))
-
   
   (setq eshell-list-files-after-cd t) ;ls after cd
 
