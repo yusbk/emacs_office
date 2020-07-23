@@ -525,6 +525,10 @@ Version 2017-09-01"
   :config
   (setq which-key-idle-delay 1.0)
   (which-key-mode)
+
+  (which-key-add-key-based-replacements
+    "<f12> v" "resize buffer")
+  
   )
 
 
@@ -1121,7 +1125,44 @@ output file. %i path(s) are relative, while %o is absolute.")
          ("C-x v p" . 'diff-hl-previous-hunk))
   :bind (("C-x M-g" . 'magit-dispatch-popup)
          ("C-x g" . magit-status)
-         ("C-x G" . magit-dispatch))
+         ("C-x G" . hydra-magit/body))
+  :init
+  (defhydra hydra-magit (:hint nil)
+
+    "
+ ^Kunci magit/GIT^
+ ^^^^^^^^----------------
+ _s_: status     _f_: fetch      _o_: checkout    _b_: branch manager        _k_: branch delete
+ _d_: diff       _c_: clone      _l_: log buffer  _u_: branch and checkout   _!_: command
+ _p_: pull       _m_: merge      _L_: log         _U_: branch orphan         _a_: blame          _q_: keluar
+
+      "
+    ("s" magit-status)
+    ("f" magit-fetch)
+    ("d" magit-diff)
+    ("c" magit-clone)
+    ("p" magit-pull )
+    ("m" magit-merge)
+    ("o" magit-checkout)
+    ("b" magit-branch-popup)
+    ("u" magit-branch-and-checkout)
+    ("U" magit-branch-orphan)
+    ("L" magit-log)
+    ("l" magit-log-buffer-file)
+    ("!" magit-git-command)
+    ("k" magit-branch-delete)
+    ("a" magit-blame-popup)
+    ("q" (message "Selesai") :exit t)
+    )
+
+  ;; Close popup when commiting - this stops the commit window
+  ;; hanging around
+  ;; From: http://git.io/rPBE0Q
+  (defadvice git-commit-commit (after delete-window activate)
+    (delete-window))
+  (defadvice git-commit-abort (after delete-window activate)
+    (delete-window))
+
   :config
   ;; Enable magit-file-mode, to enable operations that touches a file, such as log, blame
   (global-magit-file-mode)
@@ -2016,8 +2057,9 @@ Version 2017-09-01"
 (use-package csv-mode
   :ensure t
   :mode "\\.csv$"
-  :init
+  :config
   (setq csv-separators '(";"))
+  ;; (setq csv-separators '(","))
   )
 
 
@@ -2108,7 +2150,8 @@ In that case, insert the number."
     (define-key map (kbd "<return>") nil))
 
   ;; company-shell
-  (add-to-list 'company-backends 'company-shell)
+  ;; (add-to-list 'company-backends 'company-shell)
+  (add-to-list 'company-backends '(company-shell company-shell-env company-fish-shell))
 
   ;; aktifkan di org-mode selepas pastikan company-capf di company-backends
   ;; https://github.com/company-mode/company-mode/issues/50
@@ -2302,45 +2345,30 @@ In that case, insert the number."
   (dired-clean-confirm-killing-deleted-buffers nil))
 
 
-;;;; Shell/Eshell
-;; Cygwin
-;; http://www.khngai.com/emacs/cygwin.php
-(use-package cygwin-mount
-  :load-path "~/.emacs.d/lib"
-  :init
-  (setenv "PATH" (concat "c:/cygwin64/bin;" (getenv "PATH")))
-  (setq exec-path (cons "c:/cygwin64/bin/" exec-path))
-  :config
-  (cygwin-mount-activate)
-  )
-
-(use-package setup-cygwin
-  :load-path "~/.emacs.d/lib/")
-
-
+;;;; Eshell
 ;; Emacs command shell
 (use-package eshell
   :ensure nil
   :defines eshell-prompt-function
   :functions eshell/alias
-  :init
-  ;; Use Cygwin for shell
-  ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
-  ;; When running in Windows, we want to use an alternate shell so we
-  ;; can be more unixy.
-  (add-hook 'comint-output-filter-functions
-            'shell-strip-ctrl-m nil t)
-  (add-hook 'comint-output-filter-functions
-            'comint-watch-for-password-prompt nil t)
+  ;; :init
+  ;; ;; Use Cygwin for shell
+  ;; ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
+  ;; ;; When running in Windows, we want to use an alternate shell so we
+  ;; ;; can be more unixy.
+  ;; (add-hook 'comint-output-filter-functions
+  ;;           'shell-strip-ctrl-m nil t)
+  ;; (add-hook 'comint-output-filter-functions
+  ;;           'comint-watch-for-password-prompt nil t)
   
-  (setq shell-file-name "C:/cygwin64/bin/bash")
-  (setq explicit-shell-file-name shell-file-name)
-  (setenv "PATH"
-          (concat ".:/usr/local/bin:/usr/bin:/bin:"
-                  (replace-regexp-in-string " " "\\\\ "
-                                            (replace-regexp-in-string "\\\\" "/"
-                                                                      (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
-                                                                                                (getenv "PATH"))))))
+  ;; (setq shell-file-name "C:/cygwin64/bin/bash")
+  ;; (setq explicit-shell-file-name shell-file-name)
+  ;; (setenv "PATH"
+  ;;         (concat ".:/usr/local/bin:/usr/bin:/bin:"
+  ;;                 (replace-regexp-in-string " " "\\\\ "
+  ;;                                           (replace-regexp-in-string "\\\\" "/"
+  ;;                                                                     (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
+  ;;                                                                                               (getenv "PATH"))))))
 
   
   :bind (:map my-personal-map
@@ -2494,8 +2522,25 @@ In that case, insert the number."
 ;; (setq eshell-cmpl-cycle-completions nil)
 
 ;;;; Shell
+;; Cygwin
+;; http://www.khngai.com/emacs/cygwin.php
+(use-package cygwin-mount
+  :load-path "~/.emacs.d/lib"
+  :init
+  ;; (setenv "PATH" (concat "c:/cygwin64/bin;" (getenv "PATH")))
+  ;; (setq exec-path (cons "c:/cygwin64/bin/" exec-path))
+  (setenv "PATH" (concat "/cydrive/c/cygwin64/bin;" (getenv "PATH")))
+  (setq exec-path (cons "/cydrive/c/cygwin64/bin/" exec-path))
+  :config
+  (cygwin-mount-activate)
+  )
+
+(use-package setup-cygwin
+  :load-path "~/.emacs.d/lib/")
+
 (use-package shell
   :ensure nil
+  ;; :disabled
   :commands comint-send-string comint-simple-send comint-strip-ctrl-m
   :hook ((shell-mode . ansi-color-for-comint-mode-on)
          (shell-mode . n-shell-mode-hook)
@@ -2510,6 +2555,24 @@ In that case, insert the number."
 
   ;; Make URL clikable
   (add-hook 'shell-mode-hook (lambda () (goto-address-mode )))
+
+  ;; Use Cygwin for shell
+  ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
+  ;; When running in Windows, we want to use an alternate shell so we
+  ;; can be more unixy.
+  (add-hook 'comint-output-filter-functions
+            'shell-strip-ctrl-m nil t)
+  (add-hook 'comint-output-filter-functions
+            'comint-watch-for-password-prompt nil t)
+  
+  (setq shell-file-name "C:/cygwin64/bin/bash")
+  (setq explicit-shell-file-name shell-file-name)
+  (setenv "PATH"
+          (concat ".:/usr/local/bin:/usr/bin:/bin:"
+                  (replace-regexp-in-string " " "\\\\ "
+                                            (replace-regexp-in-string "\\\\" "/"
+                                                                      (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
+                                                                                                (getenv "PATH"))))))
 
   ;; Include company
   (add-hook 'shell-mode-hook #'company-mode)
@@ -2594,22 +2657,17 @@ In that case, insert the number."
 ;; Shell Pop
 (use-package shell-pop
   :ensure t
-  :defer 2
   :bind (:map my-personal-map
               ("x" . shell-pop))
-  ;; :bind ([f9] . shell-pop)
   :custom
-  (shell-pop-full-span t)
-  (shell-pop-shell-type '("eshell" "*eshell" (lambda nil (eshell))))
+  (shell-pop-set-internal-mode "shell")
+  (shell-pop-set-internal-mode-shell "/bin/bash")
+  (shell-pop-set-window-position "bottom")
   :config
-  ;; ;;shell terminal
-  ;; (setq shell-pop-shell-type (quote ("ansi-term" "*ansi-term*" (lambda nil (ansi-term shell-pop-term-shell)))))
-  ;; (setq shell-pop-term-shell "/bin/bash")
-  ;; (setq shell-pop-universal-key "C-t") ;use for eshell keybind
-
   ;; need to do this manually or not picked up by `shell-pop'
-  (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type)
+  ;; (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type)
   )
+
 
 
 ;;; Code folding
@@ -3261,6 +3319,7 @@ if there is displayed buffer that have shell it will use that window"
   :bind ("C-c u" . sqlup-capitalize-keywords-in-region)
   :hook ((sql-mode sql-interactive-mode redis-mode) . sqlup-mode)
   )
+
 ;;; Graphics
 (use-package graphviz-dot-mode
   ;; graphvis must be installed
@@ -3396,6 +3455,7 @@ if there is displayed buffer that have shell it will use that window"
 (use-package all-the-icons
   :ensure t
   :defer 0.5)
+
 ;; (use-package all-the-icons
 ;;   ;; needed to display icon correctly in doom-modeline
 ;;   :ensure t
