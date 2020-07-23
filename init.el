@@ -2345,6 +2345,165 @@ In that case, insert the number."
   (dired-clean-confirm-killing-deleted-buffers nil))
 
 
+;;;; Shell
+;; Cygwin
+;; http://www.khngai.com/emacs/cygwin.php
+;; Use Cygwin for shell
+;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
+;; When running in Windows, we want to use an alternate shell so we
+;; can be more unixy.
+(add-hook 'comint-output-filter-functions
+          'shell-strip-ctrl-m nil t)
+(add-hook 'comint-output-filter-functions
+          'comint-watch-for-password-prompt nil t)
+
+(setq shell-file-name "C:/cygwin64/bin/bash")
+(setq explicit-shell-file-name shell-file-name)
+(setenv "PATH"
+        (concat ".:/usr/local/bin:/usr/bin:/bin:"
+                (replace-regexp-in-string " " "\\\\ "
+                                          (replace-regexp-in-string "\\\\" "/"
+                                                                    (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
+                                                                                              (getenv "PATH"))))))
+(use-package cygwin-mount
+  :load-path "c:/cygwin64/home/ybka/.emacs.d/lib/"
+  :init
+  ;; (setenv "PATH" (concat "c:/cygwin64/bin;" (getenv "PATH")))
+  ;; (setq exec-path (cons "c:/cygwin64/bin/" exec-path))
+  (setenv "PATH" (concat "/cydrive/c/cygwin64/bin;" (getenv "PATH")))
+  (setq exec-path (cons "/cydrive/c/cygwin64/bin/" exec-path))
+  :custom
+  (cygwin-mount-cygwin-bin-directory "C:/cygwin64/bin/")
+  :config
+  (cygwin-mount-activate)
+  )
+
+(use-package setup-cygwin
+  :load-path "c:/cygwin64/home/ybks/.emacs.d/lib/")
+
+(use-package company-shell
+  ;; company-shell - providing completions for binaries that are found on your $PATH
+  ;; company-fish-shell - providing completions for fish-shell's functions, both builtin as well as user-defined
+  ;; company-shell-env - providing completions for environment variables based on the env command
+  :ensure company
+  :config
+  (add-to-list 'company-backends '(company-shell company-fish-shell company-shell-env))
+  )
+
+(use-package shell
+  :ensure nil
+  ;; :disabled
+  :bind ("C-c t" . shell)
+  :commands comint-send-string comint-simple-send comint-strip-ctrl-m
+  :hook ((shell-mode . ansi-color-for-comint-mode-on)
+         (shell-mode . n-shell-mode-hook)
+         (comint-output-filter-functions . comint-strip-ctrl-m))
+  :bind (:map shell-mode-map
+              ([tab] . company-manual-begin))
+  :init
+  (setq system-uses-terminfo nil)
+
+  ;; File path clickable
+  (add-hook 'shell-mode-hook 'compilation-shell-minor-mode)
+
+  ;; Make URL clikable
+  (add-hook 'shell-mode-hook (lambda () (goto-address-mode )))
+
+  ;;  company
+  (add-hook 'shell-mode-hook #'company-mode)
+
+  (defun n-shell-simple-send (proc command)
+    "Various PROC COMMANDs pre-processing before sending to shell."
+    (cond
+     ;; Checking for clear command and execute it.
+     ((string-match "^[ \t]*clear[ \t]*$" command)
+      (comint-send-string proc "\n")
+      (erase-buffer))
+     ;; Checking for man command and execute it.
+     ((string-match "^[ \t]*man[ \t]*" command)
+      (comint-send-string proc "\n")
+      (setq command (replace-regexp-in-string "^[ \t]*man[ \t]*" "" command))
+      (setq command (replace-regexp-in-string "[ \t]+$" "" command))
+      ;;(message (format "command %s command" command))
+      (funcall 'man command))
+     ;; Send other commands to the default handler.
+     (t (comint-simple-send proc command))))
+
+  (defun n-shell-mode-hook ()
+    "Shell mode customizations."
+    (local-set-key '[up] 'comint-previous-input)
+    (local-set-key '[down] 'comint-next-input)
+    (local-set-key '[right] 'comint-next-matching-input-from-input)
+    (setq comint-input-sender 'n-shell-simple-send)))
+
+;; ANSI & XTERM 256 color support
+(use-package xterm-color
+  :defines (compilation-environment
+            eshell-preoutput-filter-functions
+            eshell-output-filter-functions)
+  :functions (compilation-filter my-advice-compilation-filter)
+  :init
+  ;; For shell
+  (setenv "TERM" "xterm-256color")
+  (setq comint-output-filter-functions
+        (remove 'ansi-color-process-output comint-output-filter-functions))
+  (add-hook 'shell-mode-hook
+            (lambda ()
+              ;; Disable font-locking in this buffer to improve performance
+              (font-lock-mode -1)
+              ;; Prevent font-locking from being re-enabled in this buffer
+              (make-local-variable 'font-lock-function)
+              (setq font-lock-function (lambda (_) nil))
+              (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))
+
+  ;; For eshell
+  (with-eval-after-load 'esh-mode
+    (add-hook 'eshell-before-prompt-hook
+              (lambda ()
+                (setq xterm-color-preserve-properties t)))
+    (add-to-list 'eshell-preoutput-filter-functions 'xterm-color-filter)
+    (setq eshell-output-filter-functions
+          (remove 'eshell-handle-ansi-color eshell-output-filter-functions)))
+
+  ;; For compilation buffers
+  (setq compilation-environment '("TERM=xterm-256color"))
+  (defun my-advice-compilation-filter (f proc string)
+    (funcall f proc
+             (if (eq major-mode 'rg-mode) ; compatible with `rg'
+                 string
+               (xterm-color-filter string))))
+  (advice-add 'compilation-filter :around #'my-advice-compilation-filter)
+  (advice-add 'gud-filter :around #'my-advice-compilation-filter)
+
+  ;; For prolog inferior
+  (with-eval-after-load 'prolog
+    (add-hook 'prolog-inferior-mode-hook
+              (lambda ()
+                (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))))
+
+;; Better term
+;; @see https://github.com/akermu/emacs-libvterm#installation
+(when (and (executable-find "cmake")
+           (executable-find "libtool")
+           (executable-find "make"))
+  (use-package vterm
+    :init (defalias #'term #'vterm)))
+
+;; Shell Pop
+(use-package shell-pop
+  :ensure t
+  :bind (:map my-personal-map
+              ("x" . shell-pop))
+  :custom
+  (shell-pop-set-internal-mode "shell")
+  (shell-pop-set-internal-mode-shell "/bin/bash")
+  (shell-pop-set-window-position "bottom")
+  :config
+  ;; need to do this manually or not picked up by `shell-pop'
+  ;; (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type)
+  )
+
+
 ;;;; Eshell
 ;; Emacs command shell
 (use-package eshell
@@ -2520,154 +2679,6 @@ In that case, insert the number."
 ;; ;; When completing with multiple options, complete only as much as
 ;; ;; possible and wait for further input.
 ;; (setq eshell-cmpl-cycle-completions nil)
-
-;;;; Shell
-;; Cygwin
-;; http://www.khngai.com/emacs/cygwin.php
-(use-package cygwin-mount
-  :load-path "~/.emacs.d/lib"
-  :init
-  ;; (setenv "PATH" (concat "c:/cygwin64/bin;" (getenv "PATH")))
-  ;; (setq exec-path (cons "c:/cygwin64/bin/" exec-path))
-  (setenv "PATH" (concat "/cydrive/c/cygwin64/bin;" (getenv "PATH")))
-  (setq exec-path (cons "/cydrive/c/cygwin64/bin/" exec-path))
-  :config
-  (cygwin-mount-activate)
-  )
-
-(use-package setup-cygwin
-  :load-path "~/.emacs.d/lib/")
-
-(use-package shell
-  :ensure nil
-  ;; :disabled
-  :commands comint-send-string comint-simple-send comint-strip-ctrl-m
-  :hook ((shell-mode . ansi-color-for-comint-mode-on)
-         (shell-mode . n-shell-mode-hook)
-         (comint-output-filter-functions . comint-strip-ctrl-m))
-  :bind (:map shell-mode-map
-              ([tab] . company-manual-begin))
-  :init
-  (setq system-uses-terminfo nil)
-
-  ;; File path clickable
-  (add-hook 'shell-mode-hook 'compilation-shell-minor-mode)
-
-  ;; Make URL clikable
-  (add-hook 'shell-mode-hook (lambda () (goto-address-mode )))
-
-  ;; Use Cygwin for shell
-  ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
-  ;; When running in Windows, we want to use an alternate shell so we
-  ;; can be more unixy.
-  (add-hook 'comint-output-filter-functions
-            'shell-strip-ctrl-m nil t)
-  (add-hook 'comint-output-filter-functions
-            'comint-watch-for-password-prompt nil t)
-  
-  (setq shell-file-name "C:/cygwin64/bin/bash")
-  (setq explicit-shell-file-name shell-file-name)
-  (setenv "PATH"
-          (concat ".:/usr/local/bin:/usr/bin:/bin:"
-                  (replace-regexp-in-string " " "\\\\ "
-                                            (replace-regexp-in-string "\\\\" "/"
-                                                                      (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
-                                                                                                (getenv "PATH"))))))
-
-  ;; Include company
-  (add-hook 'shell-mode-hook #'company-mode)
-
-  (defun n-shell-simple-send (proc command)
-    "Various PROC COMMANDs pre-processing before sending to shell."
-    (cond
-     ;; Checking for clear command and execute it.
-     ((string-match "^[ \t]*clear[ \t]*$" command)
-      (comint-send-string proc "\n")
-      (erase-buffer))
-     ;; Checking for man command and execute it.
-     ((string-match "^[ \t]*man[ \t]*" command)
-      (comint-send-string proc "\n")
-      (setq command (replace-regexp-in-string "^[ \t]*man[ \t]*" "" command))
-      (setq command (replace-regexp-in-string "[ \t]+$" "" command))
-      ;;(message (format "command %s command" command))
-      (funcall 'man command))
-     ;; Send other commands to the default handler.
-     (t (comint-simple-send proc command))))
-
-  (defun n-shell-mode-hook ()
-    "Shell mode customizations."
-    (local-set-key '[up] 'comint-previous-input)
-    (local-set-key '[down] 'comint-next-input)
-    (local-set-key '[right] 'comint-next-matching-input-from-input)
-    (setq comint-input-sender 'n-shell-simple-send)))
-
-;; ANSI & XTERM 256 color support
-(use-package xterm-color
-  :defines (compilation-environment
-            eshell-preoutput-filter-functions
-            eshell-output-filter-functions)
-  :functions (compilation-filter my-advice-compilation-filter)
-  :init
-  ;; For shell
-  (setenv "TERM" "xterm-256color")
-  (setq comint-output-filter-functions
-        (remove 'ansi-color-process-output comint-output-filter-functions))
-  (add-hook 'shell-mode-hook
-            (lambda ()
-              ;; Disable font-locking in this buffer to improve performance
-              (font-lock-mode -1)
-              ;; Prevent font-locking from being re-enabled in this buffer
-              (make-local-variable 'font-lock-function)
-              (setq font-lock-function (lambda (_) nil))
-              (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))
-
-  ;; For eshell
-  (with-eval-after-load 'esh-mode
-    (add-hook 'eshell-before-prompt-hook
-              (lambda ()
-                (setq xterm-color-preserve-properties t)))
-    (add-to-list 'eshell-preoutput-filter-functions 'xterm-color-filter)
-    (setq eshell-output-filter-functions
-          (remove 'eshell-handle-ansi-color eshell-output-filter-functions)))
-
-  ;; For compilation buffers
-  (setq compilation-environment '("TERM=xterm-256color"))
-  (defun my-advice-compilation-filter (f proc string)
-    (funcall f proc
-             (if (eq major-mode 'rg-mode) ; compatible with `rg'
-                 string
-               (xterm-color-filter string))))
-  (advice-add 'compilation-filter :around #'my-advice-compilation-filter)
-  (advice-add 'gud-filter :around #'my-advice-compilation-filter)
-
-  ;; For prolog inferior
-  (with-eval-after-load 'prolog
-    (add-hook 'prolog-inferior-mode-hook
-              (lambda ()
-                (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))))
-
-;; Better term
-;; @see https://github.com/akermu/emacs-libvterm#installation
-(when (and (executable-find "cmake")
-           (executable-find "libtool")
-           (executable-find "make"))
-  (use-package vterm
-    :init (defalias #'term #'vterm)))
-
-;; Shell Pop
-(use-package shell-pop
-  :ensure t
-  :bind (:map my-personal-map
-              ("x" . shell-pop))
-  :custom
-  (shell-pop-set-internal-mode "shell")
-  (shell-pop-set-internal-mode-shell "/bin/bash")
-  (shell-pop-set-window-position "bottom")
-  :config
-  ;; need to do this manually or not picked up by `shell-pop'
-  ;; (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type)
-  )
-
 
 
 ;;; Code folding
@@ -2853,6 +2864,13 @@ showing them."
 (use-package ztree
   ;;Had diff mode with M-x ztree-diff or ordinary tree with ztree-dir
   ;; https://github.com/fourier/ztree
+  ;; h - show/hide identical files/dir
+  ;; H - show/hide hidden/ignored files/dir
+  ;; C - copy current file/dir to the left/right panel
+  ;; D - delete current file/dir
+  ;; v - quick view of current file
+  ;; r - rescan/refresh
+  ;; F5 - full rescan
   :ensure t
   :bind (
          :map my-personal-map
