@@ -1,9 +1,4 @@
-;;; init.el --- yuskam's config  -*- lexical-binding: t; coding:utf-8; fill-column: 119 -*-
-
-;; Start server
-(require 'server)
-(unless (server-running-p)
-  (server-start)) 
+;;; init.el --- plain config  -*- lexical-binding: t; coding:utf-8; fill-column: 119 -*-
 
 ;;; Commentary:
 ;; My personal config. Use `outshine-cycle-buffer' (<S-Tab> or (C-M i)) to navigate through sections, and `counsel-imenu' (C-c i)
@@ -61,52 +56,15 @@
 
 (put 'use-package 'lisp-indent-function 1)
 
-(use-package use-package-core
-  :custom
-  (use-package-verbose t)
-  (use-package-minimum-reported-time 0.005)
-  (use-package-enable-imenu-support t))
-
 ;; use-package always ensure
 (require 'use-package-ensure)
 (setq use-package-always-ensure t)
-
-;; newer than byte-compiled file issues
-(setq load-prefer-newer t)
-
-(use-package system-packages
-;; extend use-package functionality with some more useful keywords
-  :ensure t
-  :custom
-  (system-packages-noconfirm t))
-
-(use-package use-package-ensure-system-package :ensure t)
 
 ;;; Garbage collector
 (use-package gcmh
   :ensure t
   :init
   (gcmh-mode 1))
-
-;;; Quelpa
-(use-package quelpa
-  :ensure t
-  :defer t
-  :custom
-  (quelpa-update-melpa-p nil "Don't update the MELPA git repo."))
-
-(use-package quelpa-use-package :ensure t)
-
-;; update outdated package
-(use-package auto-package-update
-  :config
-  (setq auto-package-update-delete-old-versions t)
-  (setq auto-package-update-hide-results t)
-  (auto-package-update-maybe))
-
-;; Always follow symlinks. init files are normally stowed/symlinked.
-(setq vc-follow-symlinks t
-      find-file-visit-truename t)
 
 
 ;; Turn off mouse interface early in startup to avoid momentary display
@@ -147,7 +105,7 @@
               ("y" . my-init-file)
               ("0" . save-buffers-kill-emacs)
               ("Q" . delete-frame) ;C-x 5 0
-              ) 
+              )
   :init
   (defun my-init-file ()
     "Open my emacs init.el file"
@@ -155,13 +113,6 @@
     (find-file (concat user-emacs-directory "init.el")))
   )
 
-;; Emacs configuration, along with many other journals, are synchronized across machines
-(setq my-sync-directory "~/Users/ybka/emacs_things")
-;; Define configuration directory.
-(setq my-emacs-conf-directory (expand-file-name "dotemacs/" my-sync-directory)
-      my-private-conf-directory (expand-file-name "private/" my-emacs-conf-directory))
-;; For packages not available through MELPA, save it locally and put under load-path
-(add-to-list 'load-path (expand-file-name "elisp" my-emacs-conf-directory))
 
 ;; Setup catch folder to put related files at one place
 (defvar my-emacs-cache (concat user-emacs-directory "cache/")
@@ -173,68 +124,6 @@
 ;;   (load custom-file))
 (when (file-exists-p custom-file)
   (load custom-file :noerror))
-
-;;; Encoding
-;; Workaround to paste correctly is C-h v buffer-file-encoding-system
-;; to find the current buffer encoding. Then block the whole buffer
-;; M-x recode-region with the current buffer
-;; or add on top of file -*- coding: utf-8 -*-
-
-;; check OS https://karl-voit.at/2017/02/11/my-system-is-foobar/
-(use-package check-my-os
-  :ensure nil
-  :init
-  ;; Check if system is Microsoft Windows
-  (defun my-system-type-is-windows ()
-    "Return true if system is Windows-based (at least up to Win7)"
-    (string-equal system-type "windows-nt")
-    )
-
-  ;; Check if system is GNU/Linux
-  (defun my-system-type-is-gnu ()
-    "Return true if system is GNU/Linux-based"
-    (string-equal system-type "gnu/linux")
-    )
-
-  ;; Check if the hostname is mynotebook
-  (defun my-system-is-mynotebook ()
-    "Return true if the system we are running on is mynotebook"
-    (or
-     (string-equal system-name "ybka")
-     (string-equal system-name "ybka.lan")
-     )
-    )
-
-  ;; Check if the hostname is mydesktop
-  (defun my-system-is-mydesktop ()
-    "Return true if the system we are running on is mydesktop"
-    (or
-     (string-equal system-name "mydesktop")
-     (string-equal system-name "mydesktop.lan")
-     )
-    )
-
-  :config
-  ;; Run check
-  (when (my-system-type-is-windows)
-    (set-clipboard-coding-system 'utf-16-le)
-    (set-selection-coding-system 'utf-16-le)
-    (modify-coding-system-alist 'file "" 'utf-8-unix)
-    )
-  (prefer-coding-system 'utf-8)
-  (set-language-environment 'utf-8-unix)
-  (set-default-coding-systems 'utf-8)
-  (set-terminal-coding-system 'utf-8-unix)
-  (set-keyboard-coding-system 'utf-8-unix)
-  ;; (setq locale-coding-system 'utf-8-unix)
-  )
-
-;; ;; Alternativ to use conditioning depends on OS
-;; (if (eq system-type 'windows-nt)
-;;     (progn
-;;       (set-clipboard-coding-system 'utf-16-le)
-;;       (set-selection-coding-system 'utf-16-le)))
-
 
 ;;; General setup
 (setq-default ;; Use setq-default to define global default
@@ -297,6 +186,8 @@
  ad-redefinition-action 'accept
  )
 
+
+;;; Misc
 ;; Misc
 (set-frame-name "Emacs the Great")
 (delete-selection-mode 1)
@@ -314,68 +205,6 @@
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 ;; ESC is mapped as metakey by default, very counter-intuitive.
 
-;; Font size
-;; (set-face-attribute 'default nil :height 120)
-(defun my-dpi ()
-  (let* ((attrs (car (display-monitor-attributes-list)))
-         (size (assoc 'mm-size attrs))
-         (sizex (cadr size))
-         (res (cdr (assoc 'geometry attrs)))
-         (resx (- (caddr res) (car res)))
-         dpi)
-    (catch 'exit
-      ;; in terminal
-      (unless sizex
-        (throw 'exit 10))
-      ;; on big screen
-      (when (> sizex 1000)
-        (throw 'exit 10))
-      ;; DPI
-      (* (/ (float resx) sizex) 25.4))))
-
-(defun my-preferred-font-size ()
-  (let ( (dpi (my-dpi)) )
-    (cond
-     ((< dpi 110) 10)
-     ((< dpi 130) 11)
-     ((< dpi 160) 12)
-     (t 12))))
-
-(defvar my-preferred-font-size (my-preferred-font-size))
-
-(defvar my-regular-font
-  (cond
-   ((eq window-system 'x) (format "DejaVu Sans Mono-%d:weight=normal" my-preferred-font-size))
-   ((eq window-system 'w32) (format "Courier New-%d:antialias=none" my-preferred-font-size))))
-(defvar my-symbol-font
-  (cond
-   ((eq window-system 'x) (format "DejaVu Sans Mono-%d:weight=normal" my-preferred-font-size))
-   ((eq window-system 'w32) (format "DejaVu Sans Mono-%d:antialias=none" my-preferred-font-size))))
-
-(cond
- ((eq window-system 'x)
-  (if (and (fboundp 'find-font) (find-font (font-spec :name my-regular-font)))
-      (set-frame-font my-regular-font)
-    (set-frame-font "7x14")))
- ((eq window-system 'w32)
-  (set-frame-font my-regular-font)
-  (set-fontset-font nil 'cyrillic my-regular-font)
-  (set-fontset-font nil 'greek my-regular-font)
-  (set-fontset-font nil 'phonetic my-regular-font)
-  (set-fontset-font nil 'symbol my-symbol-font)))
-
-
-;;;; Some functions to be used
-(defun suppress-messages (func &rest args)
-  "Suppress message output from FUNC."
-  ;; Some packages are too noisy.
-  ;; https://superuser.com/questions/669701/emacs-disable-some-minibuffer-messages
-  (cl-flet ((silence (&rest args1) (ignore)))
-    (advice-add 'message :around #'silence)
-    (unwind-protect
-        (apply func args)
-      (advice-remove 'message #'silence))))
-
 (defun the-the ()
   ;; https://www.gnu.org/software/emacs/manual/html_node/eintr/the_002dthe.html
   "Search forward for for a duplicated word."
@@ -389,29 +218,6 @@
       (message "Found duplicated word.")
     (message "End of buffer")))
 
-(defun sudo-shell-command (command)
-  "Run COMMAND as root."
-  (interactive "MShell command (root): ")
-  (with-temp-buffer
-    (cd "/sudo::/")
-    (async-shell-command command)))
-
-
-;;; General purpose packages
-(use-package outshine
-  ;; Hide/show header for easy navigation to give a feel of Org Mode
-  ;; outside Org major-mode. Use <C-M i> or <S-Tab>
-  :ensure t
-  :defer 3
-  :bind (:map outshine-mode-map
-              ("<S-<backtab>" . outshine-cycle-buffer)
-              ;; ("<backtab>" . outshine-cycle-buffer) ;; For Windows
-              )
-  :hook (emacs-lisp-mode . outshine-mode)
-  :config
-  (setq outshine-cycle-emulate-tab t)
-  )
-
 (use-package beacon
   ;; Highlight the cursor whenever it scrolls
   :ensure t
@@ -421,116 +227,24 @@
   (setq beacon-size 10)
   (beacon-mode 1))
 
-
-;;; Cache related
-;;;; Things that use the catche folder
-(use-package recentf
-  :defer 5
-  :config
-  (setq recentf-save-file (expand-file-name "recentf" my-emacs-cache)
-        recentf-max-saved-items 'nil ;; Save the whole list
-        recentf-max-menu-items 50
-        ;; Cleanup list if idle for 10 secs
-        recentf-auto-cleanup 10)
-  ;; save it every 60 minutes
-  (run-at-time t (* 60 60) 'recentf-save-list)
-  ;; Suppress output "Wrote /home/ybka/.emacs.d/catche/recentf"
-  (advice-add 'recentf-save-list :around #'suppress-messages)
-  ;; Suppress output "Cleaning up the recentf list...done (0 removed)"
-  (advice-add 'recentf-cleanup :around #'suppress-messages)
-  (recentf-mode +1)
-  )
-
-;;; Misc
 ;; don't bind C-x C-z to suspend-frame:
 (unbind-key "C-x C-z")
 ;; if frame freeze then use xkill -frame $emacs
 
-(use-package aggressive-indent
-  ;; Aggressive indent mode
-  :hook ((emacs-lisp-mode ess-mode-hook org-src-mode-hook) . aggressive-indent-mode)
-  )
-
-(use-package ibuffer
-  ;; Better buffer management
-  :defer 3
-  :ensure ibuffer-tramp
-  :bind (("C-x C-b" . ibuffer)
-         :map ibuffer-mode-map
-         ("M-o"     . nil)) ;; unbind ibuffer-visit-buffer-1-window
-  :config
-  (add-hook 'ibuffer-hook
-            (lambda ()
-              (ibuffer-tramp-set-filter-groups-by-tramp-connection)
-              (ibuffer-do-sort-by-alphabetic)))
-  )
-
-
-(defun xah-copy-file-path (&optional @dir-path-only-p)
-  "Copy the current buffer's file path or dired path to `kill-ring'.
-Result is full path.
-If `universal-argument' is called first, copy only the dir path.
-
-If in dired, copy the file/dir cursor is on, or marked files.
-
-If a buffer is not file and not dired, copy value of `default-directory' (which is usually the current dir when that buffer was created)
-
-URL `http://ergoemacs.org/emacs/emacs_copy_file_path.html'
-Version 2017-09-01"
-  (interactive "P")
-  (let (($fpath
-         (if (string-equal major-mode 'dired-mode)
-             (progn
-               (let (($result (mapconcat 'identity (dired-get-marked-files) "\n")))
-                 (if (equal (length $result) 0)
-                     (progn default-directory )
-                   (progn $result))))
-           (if (buffer-file-name)
-               (buffer-file-name)
-             (expand-file-name default-directory)))))
-    (kill-new
-     (if @dir-path-only-p
-         (progn
-           (message "Directory path copied: ?%s?" (file-name-directory $fpath))
-           (file-name-directory $fpath))
-       (progn
-         (message "File path copied: ?%s?" $fpath)
-         $fpath )))))
-
-(global-set-key (kbd "C-c d") 'xah-copy-file-path)
-(bind-key "d" 'xah-copy-file-path my-assist-map)
-
-(use-package autorevert
-  ;; revert buffers when files on disk change
-  :defer 3
-  :config
-  (setq
-   ;; Also auto refresh dired, but be quiet about it
-   global-auto-revert-non-file-buffers t
-   auto-revert-verbose nil
-   ;; Revert pdf without asking
-   revert-without-query '("\\.pdf"))
-  (global-auto-revert-mode 1) ;; work with auto-save with Org files in Dropbox
-  )
-
-
-(use-package hungry-delete
-  :defer 3
-  :config
-  (global-hungry-delete-mode))
-
-
 (use-package which-key
   :defer 3
+  :custom
+  (which-key-show-early-on-C-h t "Allow C-h to trigger which-key b4 it's done automatically")
+  (which-key-idle-delay 10000)
+  (which-key-idle-secondary-delay 0.05)
   :config
-  (setq which-key-idle-delay 1.0)
+  ;; (setq which-key-idle-delay 1.0)
   (which-key-mode)
 
+  ;; Rename for resize-buffer menu
   (which-key-add-key-based-replacements
     "<f12> v" "resize buffer")
-  
   )
-
 
 (use-package whole-line-or-region
   ;; If no region is active, C-w and M-w will act on current line
@@ -549,6 +263,41 @@ Version 2017-09-01"
   :config
   (whole-line-or-region-global-mode)
   )
+
+;;; Cache related
+;;;; Things that use the catche folder
+(use-package recentf
+  :defer 5
+  :config
+  (setq recentf-save-file (expand-file-name "recentf" my-emacs-cache)
+        recentf-max-saved-items 'nil ;; Save the whole list
+        recentf-max-menu-items 50
+        ;; Cleanup list if idle for 10 secs
+        recentf-auto-cleanup 10)
+  ;; save it every 60 minutes
+  (run-at-time t (* 60 60) 'recentf-save-list)
+  ;; ;;Suppress output "Wrote /home/ybka/.emacs.d/catche/recentf"
+  ;; (advice-add 'recentf-save-list :around #'suppress-messages)
+  ;; ;;Suppress output "Cleaning up the recentf list...done (0 removed)"
+  ;;(advice-add 'recentf-cleanup :around #'suppress-messages)
+  (recentf-mode +1)
+  )
+
+;;; Font
+;; Text scale
+(use-package default-text-scale
+  :init
+  ;; ;; For Linux
+  ;; (global-set-key (kbd "<C-mouse-5>") 'text-scale-decrease)
+  ;; (global-set-key (kbd "<C-mouse-4>") 'text-scale-increase)
+  ;; For Windows
+  (global-set-key (kbd "<C-wheel-up>") 'text-scale-decrease)
+  (global-set-key (kbd "<C-wheel-down>") 'text-scale-increase)
+  :ensure t
+  :bind (("C--" . default-text-scale-decrease)
+         ("C-+" . default-text-scale-increase))
+  :config
+  (default-text-scale-mode))
 
 
 ;;; Commenting
@@ -603,6 +352,7 @@ Version 2017-09-01"
   )
 
 
+
 (use-package simple
   ;; Improvements over simple editing commands
   :ensure nil
@@ -610,6 +360,7 @@ Version 2017-09-01"
   :hook ((prog-mode) . auto-fill-mode)
   ;; resize buffer accordingly
   :bind
+  ;; binding changed named with which-key
   ("<f12> v" . (lambda () (interactive) (progn (visual-line-mode)
                                           (follow-mode))))
   ;; M-backspace to backward-delete-word
@@ -718,72 +469,6 @@ Version 2019-11-24"
         (put this-command 'state 0)))))
 
   ;; (bind-key "C-8" 'xah-toggle-letter-case)
-
-
-  ;; ;; Resize windows
-  ;; (defun win-resize-top-or-bot ()
-  ;;   "Figure out if the current window is on top, bottom or in the
-  ;; middle"
-  ;;   (let* ((win-edges (window-edges))
-  ;;          (this-window-y-min (nth 1 win-edges))
-  ;;          (this-window-y-max (nth 3 win-edges))
-  ;;          (fr-height (frame-height)))
-  ;;     (cond
-  ;;      ((eq 0 this-window-y-min) "top")
-  ;;      ((eq (- fr-height 1) this-window-y-max) "bot")
-  ;;      (t "mid"))))
-
-  ;; (defun win-resize-left-or-right ()
-  ;;   "Figure out if the current window is to the left, right or in the
-  ;; middle"
-  ;;   (let* ((win-edges (window-edges))
-  ;;          (this-window-x-min (nth 0 win-edges))
-  ;;          (this-window-x-max (nth 2 win-edges))
-  ;;          (fr-width (frame-width)))
-  ;;     (cond
-  ;;      ((eq 0 this-window-x-min) "left")
-  ;;      ((eq (+ fr-width 4) this-window-x-max) "right")
-  ;;      (t "mid"))))
-
-  ;; (defun win-resize-enlarge-horiz ()
-  ;;   (interactive)
-  ;;   (cond
-  ;;    ((equal "top" (win-resize-top-or-bot)) (enlarge-window -1))
-  ;;    ((equal "bot" (win-resize-top-or-bot)) (enlarge-window 1))
-  ;;    ((equal "mid" (win-resize-top-or-bot)) (enlarge-window -1))
-  ;;    (t (message "nil"))))
-
-  ;; (defun win-resize-minimize-horiz ()
-  ;;   (interactive)
-  ;;   (cond
-  ;;    ((equal "top" (win-resize-top-or-bot)) (enlarge-window 1))
-  ;;    ((equal "bot" (win-resize-top-or-bot)) (enlarge-window -1))
-  ;;    ((equal "mid" (win-resize-top-or-bot)) (enlarge-window 1))
-  ;;    (t (message "nil"))))
-
-  ;; (defun win-resize-enlarge-vert ()
-  ;;   (interactive)
-  ;;   (cond
-  ;;    ((equal "left" (win-resize-left-or-right)) (enlarge-window-horizontally -1))
-  ;;    ((equal "right" (win-resize-left-or-right)) (enlarge-window-horizontally 1))
-  ;;    ((equal "mid" (win-resize-left-or-right)) (enlarge-window-horizontally -1))))
-
-  ;; (defun win-resize-minimize-vert ()
-  ;;   (interactive)
-  ;;   (cond
-  ;;    ((equal "left" (win-resize-left-or-right)) (enlarge-window-horizontally 1))
-  ;;    ((equal "right" (win-resize-left-or-right)) (enlarge-window-horizontally -1))
-  ;;    ((equal "mid" (win-resize-left-or-right)) (enlarge-window-horizontally 1))))
-
-  ;; (global-set-key [C-S-down] 'win-resize-minimize-vert)
-  ;; (global-set-key [C-S-up] 'win-resize-enlarge-vert)
-  ;; (global-set-key [C-S-left] 'win-resize-minimize-horiz)
-  ;; (global-set-key [C-S-right] 'win-resize-enlarge-horiz)
-  ;; (global-set-key [C-S-up] 'win-resize-enlarge-horiz)
-  ;; (global-set-key [C-S-down] 'win-resize-minimize-horiz)
-  ;; (global-set-key [C-S-left] 'win-resize-enlarge-vert)
-  ;; (global-set-key [C-S-right] 'win-resize-minimize-vert)
-
   )
 
 
@@ -814,52 +499,6 @@ Version 2019-11-24"
         er--show-expansion-message t))
 
 
-(use-package wrap-region
-  ;; Wrap selected region
-  :hook ((prog-mode text-mode) . wrap-region-mode)
-  :config
-  (wrap-region-add-wrappers
-   '(
-     ("$" "$")
-     ("*" "*")
-     ("=" "=")
-     ("`" "`")
-     ("/" "/")
-     ("_" "_")
-     ("~" "~")
-     ("+" "+")
-     ("/* " " */" "#" (java-mode javascript-mode css-mode))))
-  (add-to-list 'wrap-region-except-modes 'ibuffer-mode)
-  (add-to-list 'wrap-region-except-modes 'magit-mode)
-  (add-to-list 'wrap-region-except-modes 'magit-todo-mode)
-  (add-to-list 'wrap-region-except-modes 'magit-popup-mode)
-  )
-
-
-(use-package change-inner
-  :ensure t
-  :bind (("M-I" . copy-inner)
-         ("M-O" . copy-outer)
-         ("s-i" . change-inner)
-         ("s-o" . change-outer))
-  )
-
-;;;; try
-(use-package try
-  :ensure t
-  :defer t)
-
-;;;; Modernized Package Menu
-(use-package async
-  ;; For synchronizing package update
-  :defer 3)
-
-(use-package paradox
-  :ensure t
-  :defer 1
-  :config
-  (paradox-enable))
-
 ;;; Text Editing / Substitution / Copy-Pasting
 (use-package iedit
   ;;to combine iedit with mc can use idedit-switch-to-mc-mode
@@ -874,11 +513,38 @@ Version 2019-11-24"
   :ensure t
   :defer 10
   :commands (mc/mark-next-like-this)
+  :bind (:map my-assist-map
+              ("m" . hydra-multiple-cursors/body))
+  :init
+  (defhydra hydra-multiple-cursors (:hint nil)
+    "
+ Up^^             Down^^           Miscellaneous           % 2(mc/num-cursors) cursor%s(if (> (mc/num-cursors) 1) \"s\" \"\")
+------------------------------------------------------------------
+ [_p_]   Next     [_n_]   Next     [_l_] Edit lines  [_0_] Insert numbers
+ [_P_]   Skip     [_N_]   Skip     [_a_] Mark all    [_A_] Insert letters
+ [_M-p_] Unmark   [_M-n_] Unmark   [_s_] Search
+ [Click] Cursor at point       [_q_] Quit"
+    ("l" mc/edit-lines :exit t)
+    ("a" mc/mark-all-like-this :exit t)
+    ("n" mc/mark-next-like-this :exit nil)
+    ("N" mc/skip-to-next-like-this)
+    ("M-n" mc/unmark-next-like-this)
+    ("p" mc/mark-previous-like-this :exit nil)
+    ("P" mc/skip-to-previous-like-this)
+    ("M-p" mc/unmark-previous-like-this)
+    ("s" mc/mark-all-in-region-regexp :exit t)
+    ("0" mc/insert-numbers :exit t)
+    ("A" mc/insert-letters :exit t)
+    ("<mouse-1>" mc/add-cursor-on-click)
+    ;; Help with click recognition in this hydra
+    ("<down-mouse-1>" ignore)
+    ("<drag-mouse-1>" ignore)
+    ("q" nil))
   :bind
   (
    ;; Common use case: er/expand-region, then add curors.
-   ("C-}" . mc/mark-next-like-this)
-   ("C-{" . mc/mark-previous-like-this)
+   ("<C-S-next>" . mc/mark-next-like-this)
+   ("<C-S-prior>" . mc/mark-previous-like-this)
    ;; After selecting all, we may end up with cursors outside of view
    ;; Use C-' to hide/show unselected lines.
    ("C-*" . mc/mark-all-like-this)
@@ -975,7 +641,7 @@ Version 2019-11-24"
   :bind (
          :map my-search-map
          ("s" . swiper)
-         ("c" . ivy-resume) ;continue C-s C-r
+         ("S" . ivy-resume) ;continue C-s C-r
          ("a" . counsel-ag)
          ("d" . counsel-dired-jump)
          ("f" . counsel-find-file)
@@ -984,7 +650,7 @@ Version 2019-11-24"
          ("j" . counsel-file-jump)
          ("l" . counsel-find-library)
          ("r" . counsel-recentf)
-         ("S" . counsel-locate)
+         ("L" . counsel-locate)
          ("u" . counsel-unicode-char)
          ("v" . counsel-set-variable)
          )
@@ -1125,44 +791,7 @@ output file. %i path(s) are relative, while %o is absolute.")
          ("C-x v p" . 'diff-hl-previous-hunk))
   :bind (("C-x M-g" . 'magit-dispatch-popup)
          ("C-x g" . magit-status)
-         ("C-x G" . hydra-magit/body))
-  :init
-  (defhydra hydra-magit (:hint nil)
-
-    "
- ^Kunci magit/GIT^
- ^^^^^^^^----------------
- _s_: status     _f_: fetch      _o_: checkout    _b_: branch manager        _k_: branch delete
- _d_: diff       _c_: clone      _l_: log buffer  _u_: branch and checkout   _!_: command
- _p_: pull       _m_: merge      _L_: log         _U_: branch orphan         _a_: blame          _q_: keluar
-
-      "
-    ("s" magit-status)
-    ("f" magit-fetch)
-    ("d" magit-diff)
-    ("c" magit-clone)
-    ("p" magit-pull )
-    ("m" magit-merge)
-    ("o" magit-checkout)
-    ("b" magit-branch-popup)
-    ("u" magit-branch-and-checkout)
-    ("U" magit-branch-orphan)
-    ("L" magit-log)
-    ("l" magit-log-buffer-file)
-    ("!" magit-git-command)
-    ("k" magit-branch-delete)
-    ("a" magit-blame-popup)
-    ("q" (message "Selesai") :exit t)
-    )
-
-  ;; Close popup when commiting - this stops the commit window
-  ;; hanging around
-  ;; From: http://git.io/rPBE0Q
-  (defadvice git-commit-commit (after delete-window activate)
-    (delete-window))
-  (defadvice git-commit-abort (after delete-window activate)
-    (delete-window))
-
+         ("C-x G" . magit-dispatch))
   :config
   ;; Enable magit-file-mode, to enable operations that touches a file, such as log, blame
   (global-magit-file-mode)
@@ -1191,10 +820,6 @@ output file. %i path(s) are relative, while %o is absolute.")
         magit-clone-set-remote.pushDefault nil
         magit-clone-default-directory "~/projects/")
 
-  ;; (defun magit-status-with-prefix ()
-  ;;   (interactive)
-  ;;   (let ((current-prefix-arg '(4)))
-  ;;     (call-interactively 'magit-status)))
 
   ;; autoload https://github.com/alphapapa/unpackaged.el#magit
   (defun my-magit-status ()
@@ -1230,17 +855,6 @@ command was called, go to its unstaged changes section."
   (add-to-list 'magit-process-find-password-functions
                'magit-process-password-auth-source)
 
-  ;; ;; Useful functions copied from
-  ;; ;; https://stackoverflow.com/questions/9656311/conflict-resolution-with-emacs-ediff-how-can-i-take-the-changes-of-both-version/29757750#29757750
-  ;; ;; Combined with ~ to swap the order of the buffers you can get A then B or B then A
-  ;; (defun ediff-copy-both-to-C ()
-  ;;   (interactive)
-  ;;   (ediff-copy-diff ediff-current-difference nil 'C nil
-  ;;                    (concat
-  ;;                     (ediff-get-region-contents ediff-current-difference 'A ediff-control-buffer)
-  ;;                     (ediff-get-region-contents ediff-current-difference 'B ediff-control-buffer))))
-  ;; (defun add-d-to-ediff-mode-map () (define-key ediff-mode-map "d" 'ediff-copy-both-to-C))
-  ;; (add-hook 'ediff-keymap-setup-hook 'add-d-to-ediff-mode-map)
 
   ;; Always expand file in ediff.
   ;; show help in same windows
@@ -1299,14 +913,6 @@ command was called, go to its unstaged changes section."
   )
 
 
-;; Provides stage hunk at buffer, more useful
-;; (use-package git-gutter
-;;   :defer 3
-;;   :commands (git-gutter:stage-hunk)
-;;   :bind (:map vc-prefix-map
-;;               ("s" . 'git-gutter:stage-hunk))
-;;   )
-
 (use-package git-gutter
   :ensure t
   ;; :when window-system
@@ -1336,14 +942,6 @@ command was called, go to its unstaged changes section."
       (define-fringe-bitmap 'git-gutter-fr:deleted
         [0 0 0 0 0 0 0 0 0 0 0 0 0 128 192 224 240 248]
         nil nil 'center))))
-
-
-(use-package git-timemachine
-  ;; see file history
-  ;; w copy short hash or W for full hash
-  :bind (:map my-personal-map
-              ("G" . git-timemachine))
-  :ensure t)
 
 
 (use-package smerge-mode
@@ -1389,60 +987,6 @@ _p_rev       _u_pper              _=_: upper/lower       _r_esolve
                                    (when smerge-mode
                                      (my-smerge-hydra/body)))))
 
-;; smerge-mode is used instead
-(use-package ediff
-  ;; Ediff is great, but I have to tell it to use one frame (since I start
-  ;; Emacs before X/wayland, it defaults to using two frames).
-  :defer t
-  :disabled
-  :ensure t
-  :custom
-  (ediff-window-setup-function #'ediff-setup-windows-plain)
-  :hook
-  (ediff-prepare-buffer . my/ediff-prepare-buffer)
-  :config
-  ;; Change some keybindings
-  (defun ora-ediff-hook ()
-    (ediff-setup-keymap)
-    (define-key ediff-mode-map "j" 'ediff-next-difference)
-    (define-key ediff-mode-map "k" 'ediff-previous-difference))
-
-  (add-hook 'ediff-mode-hook 'ora-ediff-hook)
-
-  ;; Restore window after Ediff quit
-  (winner-mode)
-  (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
-
-
-  (defun my/ediff-prepare-buffer ()
-    "Function to prepare ediff buffers.
-
-Runs with `ediff-prepare-buffer-hook' so that it gets run on all
-three ediff buffers (A, B, and C)."
-    (when (memq major-mode '(org-mode emacs-lisp-mode))
-      ;; unfold org/elisp files
-      (outline-show-all))))
-
-
-
-;;; Version-control not from Linux settings
-;; use ediff
-;; use * to refine key and @ to turn on automatic refinig when moving to a different hunk
-(use-package ediff
-  :bind ("C-x g" . ediff)
-  :disabled
-  :config
-  ;; don't start another frame
-  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
-  ;; put windows side by side
-  (setq ediff-split-window-function 'split-window-horizontally)
-  ;; show diff character lever
-  (setq-default ediff-foward-word-function 'forward-char)
-  ;;revert windows on exit -needs winner mode
-  (winner-mode)
-  (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
-  )
-
 
 ;;; Window and Buffer management
 (use-package windmove
@@ -1459,26 +1003,7 @@ three ediff buffers (A, B, and C)."
          )
   )
 
-(use-package winum
-  ;; Select windows with Meta key
-  :ensure t
-  :defer 1
-  :init
-  (setq winum-keymap
-        (let ((map (make-sparse-keymap)))
-          ;; (define-key map (kbd "<f2> w") 'winum-select-window-by-number)
-          (define-key map (kbd "M-0") 'winum-select-window-0-or-10)
-          (define-key map (kbd "M-1") 'winum-select-window-1)
-          (define-key map (kbd "M-2") 'winum-select-window-2)
-          (define-key map (kbd "M-3") 'winum-select-window-3)
-          (define-key map (kbd "M-4") 'winum-select-window-4)
-          (define-key map (kbd "M-5") 'winum-select-window-5)
-          (define-key map (kbd "M-6") 'winum-select-window-6)
-          (define-key map (kbd "M-7") 'winum-select-window-7)
-          (define-key map (kbd "M-8") 'winum-select-window-8)
-          map))
-  :config
-  (winum-mode))
+
 
 (use-package window
   ;; Handier movement over default window.el
@@ -1493,7 +1018,7 @@ three ediff buffers (A, B, and C)."
          ("C-3"               . split-window-right-and-move-there)
          ("M-o"               . 'other-window)
          ("M-O"               . (lambda () (interactive) (other-window -1))) ;; Cycle backward
-         ("M-<tab>"           . 'other-frame)
+         ("M-<tab>" . 'other-frame)
          ("<M-S-iso-lefttab>" . (lambda () (interactive) (other-frame -1))) ;; Cycle backwards
          )
   :init
@@ -1537,7 +1062,29 @@ horizontal mode."
   )
 
 
+(use-package winum
+  :ensure t
+  :defer 1
+  :init
+  (setq winum-keymap
+        (let ((map (make-sparse-keymap)))
+          ;; (define-key map (kbd "<f2> w") 'winum-select-window-by-number)
+          (define-key map (kbd "M-0") 'winum-select-window-0-or-10)
+          (define-key map (kbd "M-1") 'winum-select-window-1)
+          (define-key map (kbd "M-2") 'winum-select-window-2)
+          (define-key map (kbd "M-3") 'winum-select-window-3)
+          (define-key map (kbd "M-4") 'winum-select-window-4)
+          (define-key map (kbd "M-5") 'winum-select-window-5)
+          (define-key map (kbd "M-6") 'winum-select-window-6)
+          (define-key map (kbd "M-7") 'winum-select-window-7)
+          (define-key map (kbd "M-8") 'winum-select-window-8)
+          map))
+  :config
+  (winum-mode))
+
+
 (use-package ace-window
+  :disabled
   :defer 3
   :bind ([S-return] . ace-window)
   :custom-face (aw-leading-char-face ((t (:inherit ace-jump-face-foreground :height 3.0))))
@@ -1563,13 +1110,12 @@ horizontal mode."
   (setq nswbuff-display-intermediate-buffers t)
   )
 
-
 (use-package golden-ratio
   ;; Resize windows with ratio https://github.com/roman/golden-ratio.el
   :ensure t
   :defer 5
-  :bind* (:map my-assist-map
-               ("g" . golden-ratio-mode))
+  :bind* (:map my-personal-map
+               ("V" . golden-ratio-mode))
   :diminish golden-ratio-mode
   :init
   (golden-ratio-mode 1)
@@ -1715,6 +1261,7 @@ With ARG, swap them instead."
   :bind (("M-z" . avy-zap-to-char-dwim)
          ("M-Z" . avy-zap-up-to-char-dwim)))
 
+
 ;;;; Copy file path
 (defun xah-copy-file-path (&optional @dir-path-only-p)
   "Copy the current buffer's file path or dired path to `kill-ring'.
@@ -1723,7 +1270,7 @@ If `universal-argument' is called first, copy only the dir path.
 
 If in dired, copy the file/dir cursor is on, or marked files.
 
-If a buffer is not file and not dired, copy value of `default-directory' (which is usually 
+If a buffer is not file and not dired, copy value of `default-directory' (which is usually
 the current dir when that buffer was created)
 
 URL `http://ergoemacs.org/emacs/emacs_copy_file_path.html'
@@ -1757,6 +1304,7 @@ Version 2017-09-01"
 (use-package projectile
   :defer 2
   :ensure ripgrep ;; required by projectile-ripgrep
+  :ensure which-key ;; to rename C-c p
   :bind-keymap
   ("C-c p" . projectile-command-map)
   ;; :bind* (("C-c p f" . 'projectile-find-file))
@@ -1764,10 +1312,25 @@ Version 2017-09-01"
               ("f" . projectile-find-file)
               ("p" . counsel-switch-project))
   :config
+  (which-key-add-key-based-replacements
+    "C-c p" "projectile-map"
+    "C-c p x" "projectile-shell")
+  
   ;; ;; Where my projects and clones are normally placed.
   ;; (setq projectile-project-search-path '("~/projects")
   ;;       projectile-completion-system 'ivy)
   ;; (projectile-mode +1)
+
+  ;; Tetapkan project folder
+  (setq projectile-project-search-path '("c:/Users/ybka/Documents/GitFH"
+                                         "c:/Users/ybka/Documents/GitHub"))
+
+  ;; Don't consider my home dir as a project
+  (add-to-list 'projectile-ignored-projects `,(concat (getenv "HOME") "/"))
+
+  ;; catch projects
+  (setq projectile-enable-caching t)
+
   
   ;; Different than projectile-switch-project coz this works globally
   (defun counsel-switch-project ()
@@ -1862,68 +1425,6 @@ Version 2017-09-01"
   )
 
 
-(use-package whitespace
-  :diminish (global-whitespace-mode
-             whitespace-mode
-             whitespace-newline-mode)
-  :commands (whitespace-buffer
-             whitespace-cleanup
-             whitespace-mode
-             whitespace-turn-off)
-  :preface
-  (defvar normalize-hook nil)
-
-  (defun normalize-file ()
-    (interactive)
-    (save-excursion
-      (goto-char (point-min))
-      (whitespace-cleanup)
-      (run-hook-with-args normalize-hook)
-      (delete-trailing-whitespace)
-      (goto-char (point-max))
-      (delete-blank-lines)
-      (set-buffer-file-coding-system 'unix)
-      (goto-char (point-min))
-      (while (re-search-forward "\r$" nil t)
-        (replace-match ""))
-      (set-buffer-file-coding-system 'utf-8)
-      (let ((require-final-newline t))
-        (save-buffer))))
-
-  (defun maybe-turn-on-whitespace ()
-    "depending on the file, maybe clean up whitespace."
-    (when (and (not (or (memq major-mode '(markdown-mode))
-                        (and buffer-file-name
-                             (string-match "\\(\\.texi\\|COMMIT_EDITMSG\\)\\'"
-                                           buffer-file-name))))
-               (locate-dominating-file default-directory ".clean")
-               (not (locate-dominating-file default-directory ".noclean")))
-      (whitespace-mode 1)
-      ;; For some reason, having these in settings.el gets ignored if
-      ;; whitespace loads lazily.
-      (setq whitespace-auto-cleanup t
-            whitespace-line-column 80
-            whitespace-rescan-timer-time nil
-            whitespace-silent t
-            whitespace-style '(face trailing lines space-before-tab empty))
-      (add-hook 'write-contents-hooks
-                #'(lambda () (ignore (whitespace-cleanup))) nil t)
-      (whitespace-cleanup)))
-
-  :init
-  (add-hook 'find-file-hooks 'maybe-turn-on-whitespace t)
-  :config
-  (remove-hook 'find-file-hooks 'whitespace-buffer)
-  (remove-hook 'kill-buffer-hook 'whitespace-buffer))
-
-(use-package whitespace-cleanup-mode
-  ;; Automatically cleanup whitespace
-  :defer 3
-  :config
-  (add-to-list 'whitespace-cleanup-mode-ignore-modes 'python-mode)
-  (global-whitespace-cleanup-mode))
-
-
 ;; Check the great gist at
 ;; https://gist.github.com/pvik/8eb5755cc34da0226e3fc23a320a3c95
 ;; And this tutorial: https://ebzzry.io/en/emacs-pairs/
@@ -1940,10 +1441,10 @@ Version 2017-09-01"
          ("M-["           . sp-wrap-square)
          ("M-{"           . sp-wrap-curly)
          ("M-<backspace>" . sp-backward-unwrap-sexp) ;unwrap outside exp2 when in exp3
-         ("M-<del>"       . sp-unwrap-sexp) ;unwrap exp3 when in exp3 
+         ("M-<del>"       . sp-unwrap-sexp) ;unwrap exp3 when in exp3
          ("C-S-<right>"     . sp-forward-slurp-sexp) ;include exp4 when in exp3
          ("C-S-<left>"      . sp-backward-slurp-sexp) ;include exp1 when in exp2
-         ("C-M-<right>"   . sp-forward-barf-sexp) ;remove exp4 from ()  
+         ("C-M-<right>"   . sp-forward-barf-sexp) ;remove exp4 from ()
          ("C-M-<left>"    . sp-backward-barf-sexp) ;remove exp2 from ()
          ("C-M-a"         . sp-beginning-of-sexp)
          ("C-M-z"         . sp-end-of-sexp)
@@ -1974,13 +1475,13 @@ Version 2017-09-01"
     ("N" sp-backward-down-sexp)
     ("p" sp-up-sexp)
     ("P" sp-backward-up-sexp)
-    
+
     ;; Slurping & barfing
     ("h" sp-backward-slurp-sexp)
     ("H" sp-backward-barf-sexp)
     ("l" sp-forward-slurp-sexp)
     ("L" sp-forward-barf-sexp)
-    
+
     ;; Wrapping
     ("R" sp-rewrap-sexp)
     ("u" sp-unwrap-sexp)
@@ -1988,7 +1489,7 @@ Version 2017-09-01"
     ("(" sp-wrap-round)
     ("{" sp-wrap-curly)
     ("[" sp-wrap-square)
-    
+
     ;; Sexp juggling
     ("S" sp-split-sexp)
     ("s" sp-splice-sexp)
@@ -1998,7 +1499,7 @@ Version 2017-09-01"
     ("A" sp-absorb-sexp)
     ("E" sp-emit-sexp)
     ("o" sp-convolute-sexp)
-    
+
     ;; Destructive editing
     ("c" sp-change-inner :exit t)
     ("C" sp-change-enclosing :exit t)
@@ -2008,11 +1509,11 @@ Version 2017-09-01"
 
     ("q" nil)
     ("g" nil))
-  
+
   :config
   (require 'smartparens-config)
   (setq sp-show-pair-from-inside t)
-  
+
   (--each '(css-mode-hook
             restclient-mode-hook
             js-mode-hook
@@ -2057,14 +1558,13 @@ Version 2017-09-01"
 (use-package csv-mode
   :ensure t
   :mode "\\.csv$"
-  :config
+  :init
   (setq csv-separators '(";"))
-  ;; (setq csv-separators '(","))
   )
 
 
 (use-package find-func
-  :defer
+  :defer t
   :bind (:map my-search-map
               ("x f" . find-function)
               ("x v" . find-variable)
@@ -2072,6 +1572,12 @@ Version 2017-09-01"
   :hook
   (find-function-after . reposition-window))
 
+
+(use-package aggressive-indent
+  :ensure t
+  ;; Aggressive indent mode
+  :hook ((emacs-lisp-mode ess-r-mode inferior-ess-r-mode org-src-mode) . aggressive-indent-mode)
+  )
 
 
 
@@ -2093,84 +1599,6 @@ Version 2017-09-01"
   (ac-dwim t "Do what I mean")
   (ac-candidate-limit 5 "Number of candidates to show")
   (ac-menu-height 5 "Height of candidate menu")
-  ) 
-
-(use-package company
-  :defer 3
-  :ensure company-quickhelp ; Show short documentation at point
-  :ensure company-shell
-  :bind (
-         :map company-active-map
-         ("C-c ?" . company-quickhelp-manual-begin)
-         ("C-n" . company-select-next)
-         ("C-p" . company-select-previous)
-         ("C-d" . company-show-doc-buffer)
-         ("<tab>" . company-complete)
-         ("C-i" . company-complete-common)
-         :map my-search-map
-         ("<tab>" . company-complete-selection)
-         ("c" . company-mode)
-         )
-  :config
-  ;; (global-company-mode)
-
-  ;; Use Company for completion
-  (bind-key [remap completion-at-point] #'company-complete company-mode-map)
-
-  ;; Use tab key to cycle through suggestions.
-  ;; ('tng' means 'tab and go')
-  (company-tng-configure-default)
-
-  ;; Directly press [1..9] to insert candidates
-  ;; See http://oremacs.com/2017/12/27/company-numbers/
-  (defun ora-company-number ()
-    "Forward to `company-complete-number'.
-Unless the number is potentially part of the candidate.
-In that case, insert the number."
-    (interactive)
-    (let* ((k (this-command-keys))
-           (re (concat "^" company-prefix k)))
-      (if (or (cl-find-if (lambda (s) (string-match re s))
-                          company-candidates)
-              (> (string-to-number k)
-                 (length company-candidates)))
-          (self-insert-command 1)
-        (company-complete-number
-         (if (equal k "0")
-             10
-           (string-to-number k))))))
-
-  (let ((map company-active-map))
-    (mapc (lambda (x) (define-key map (format "%d" x) 'ora-company-number))
-          (number-sequence 0 9))
-    (define-key map " " (lambda ()
-                          (interactive)
-                          (company-abort)
-                          (self-insert-command 1)))
-    (define-key map (kbd "<return>") nil))
-
-  ;; company-shell
-  ;; (add-to-list 'company-backends 'company-shell)
-  (add-to-list 'company-backends '(company-shell company-shell-env company-fish-shell))
-
-  ;; aktifkan di org-mode selepas pastikan company-capf di company-backends
-  ;; https://github.com/company-mode/company-mode/issues/50
-  (defun add-pcomplete-to-capf ()
-    (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
-  (add-hook 'org-mode-hook #'add-pcomplete-to-capf)
-
-  (setq company-tooltip-align-annotations t   ; align
-        company-tooltip-limit 6               ; list to show
-        ;; invert the navigation direction if the the completion
-        ;; popup-isearch-match is displayed on top (happens near the bottom of
-        ;; windows)
-        company-tooltip-flip-when-above t
-        company-show-numbers t                ; Easy navigation to candidates with M-<n>
-        company-idle-delay .2                 ; delay before autocomplete popup
-        company-minimum-prefix-length 3       ; 4 prefix sebelum tunjukkan cadangan (default)
-        company-abort-manual-when-too-short t ; tanpa company sekiranya prefix pendek dari 'minimum-prefix-length'
-        company-selection-wrap-around t       ; going back to top list when comes to the end
-        )
   )
 
 
@@ -2205,303 +1633,6 @@ In that case, insert the number."
                                            try-complete-lisp-symbol-partially
                                            try-complete-lisp-symbol)))
 
-(use-package abbrev
-  ;;M-x a
-  :ensure nil
-  :defer 5
-  :hook ((text-mode prog-mode erc-mode LaTeX-mode) . abbrev-mode)
-  :init
-  (setq save-abbrevs 'silently)
-  :config
-  (setq-default abbrev-file-name (expand-file-name "abbrev_defs" my-private-conf-directory))
-  (if (file-exists-p abbrev-file-name)
-      (quietly-read-abbrev-file)))
-
-
-(use-package pabbrev
-  :diminish pabbrev-mode
-  :hook ((org-mode
-          ess-r-mode
-          emacs-lisp-mode
-          text-mode). pabbrev-mode)
-
-  :init
-  (setq pabbrev-idle-timer-verbose nil
-        pabbrev-read-only-error nil
-        pabbrev-scavenge-on-large-move nil)
-  :bind (:map my-assist-map ("i" . pabbrev-expand-maybe))
-  :config
-  (put 'yas-expand 'pabbrev-expand-after-command t)
-
-  ;;aktifkan pabbrev
-  (global-pabbrev-mode)
-
-  ;; Fix for pabbrev not working in org mode
-  ;; http://lists.gnu.org/archive/html/emacs-orgmode/2016-02/msg00311.html
-  ;; (define-key pabbrev-mode-map (kbd "C-i") 'pabbrev-expand-maybe)
-  ;; (define-key pabbrev-mode-map [tab] 'pabbrev-expand-maybe) ;default
-
-  ;; kill all possible overlay from current view
-  (setq pabbrev-debug-erase-all-overlays t)
-
-  ;; ;; hook to text-mode-hook
-  ;; (add-hook 'text-mode-hook (lambda () (pabbrev-mode)))
-
-  ;; pretty print a hash
-  (setq pabbrev-debug-print-hash t)
-
-  ;;limit suggestions and sort
-  (setq pabbrev-suggestions-limit-alpha-sort 5)
-  )
-
-
-;;; Display
-;;Activate with M-x display-ansi-colors
-(use-package ansi-color
-  :ensure nil
-  :init
-  (setq ansi-color-faces-vector
-        [default bold shadow italic underline bold bold-italic bold])
-
-  :bind (:map my-assist-map
-              ("a" . display-ansi-col))
-  :hook ((ess-mode inferior-ess-mode) . display-ansi-col)
-  :config
-  (defun display-ansi-col ()
-    (interactive)
-    (ansi-color-apply-on-region (point-min) (point-max)))
-  )
-
-(use-package battery
-  ;; :disabled t
-  :config
-  (when (and battery-status-function
-             (not (string-match-p "N/A"
-                                  (battery-format "%B"
-                                                  (funcall battery-status-function)))))
-    )
-
-  (display-battery-mode 1)
-  )
-
-
-;; Text scale
-(use-package default-text-scale
-  :init
-  ;; ;; For Linux
-  ;; (global-set-key (kbd "<C-mouse-5>") 'text-scale-decrease)
-  ;; (global-set-key (kbd "<C-mouse-4>") 'text-scale-increase)
-  ;; For Windows
-  (global-set-key (kbd "<C-wheel-up>") 'text-scale-decrease)
-  (global-set-key (kbd "<C-wheel-down>") 'text-scale-increase)
-  :ensure t
-  :bind (("C--" . default-text-scale-decrease)
-         ("C-+" . default-text-scale-increase))
-  :config
-  (default-text-scale-mode))
-
-
-;;; Terminal
-;;;; Dired
-(use-package dired
-  :ensure nil
-  ;; Emacs can act as your file finder/explorer.  Dired is the built-in way
-  ;; to do this.
-  :bind
-  (("C-x C-d" . dired) ; overrides list-directory
-   :map  dired-mode-map
-   ("l" . dired-up-directory)) ; use l to go up in dired
-  :config
-  (setq dired-auto-revert-buffer t)
-  (setq dired-create-destination-dirs 'ask)
-  (setq dired-dwim-target t)
-  (setq dired-isearch-filenames 'dwim)
-  (setq dired-recursive-copies 'always)
-  (setq dired-recursive-deletes 'always)
-  ;; -l: long listing format REQUIRED in dired-listing-switches
-  ;; -a: show everything (including dotfiles)
-  ;; -h: human-readable file sizes
-  (setq dired-listing-switches "-alh --group-directories-first")
-  (defun my/dired-ediff-marked ()
-    "Run `ediff' on two marked files in a dired buffer."
-    (interactive)
-    (unless (eq 'dired-mode major-mode)
-      (error "For use in dired buffers only"))
-    (let ((files (dired-get-marked-files)))
-      (when (not (eq 2 (length files)))
-        (error "Two files not marked"))
-      (ediff (car files) (nth 1 files)))))
-
-(use-package dired-x
-  :ensure nil
-  :hook
-  (dired-load . (lambda () (load "dired-x" nil t)))
-  :bind
-  ("C-x C-j" . dired-jump)
-  :custom
-  ;; By default, dired asks you if you want to delete the dired buffer if
-  ;; you delete the folder. I can't think of a reason I'd ever want to do
-  ;; that.
-  (dired-clean-confirm-killing-deleted-buffers nil))
-
-
-;;;; Shell
-;; Cygwin
-;; http://www.khngai.com/emacs/cygwin.php
-;; Use Cygwin for shell
-;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
-;; When running in Windows, we want to use an alternate shell so we
-;; can be more unixy.
-(add-hook 'comint-output-filter-functions
-          'shell-strip-ctrl-m nil t)
-(add-hook 'comint-output-filter-functions
-          'comint-watch-for-password-prompt nil t)
-
-(setq shell-file-name "C:/cygwin64/bin/bash")
-(setq explicit-shell-file-name shell-file-name)
-(setenv "PATH"
-        (concat ".:/usr/local/bin:/usr/bin:/bin:"
-                (replace-regexp-in-string " " "\\\\ "
-                                          (replace-regexp-in-string "\\\\" "/"
-                                                                    (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
-                                                                                              (getenv "PATH"))))))
-(use-package cygwin-mount
-  :load-path "c:/cygwin64/home/ybka/.emacs.d/lib/"
-  :init
-  ;; (setenv "PATH" (concat "c:/cygwin64/bin;" (getenv "PATH")))
-  ;; (setq exec-path (cons "c:/cygwin64/bin/" exec-path))
-  (setenv "PATH" (concat "/cydrive/c/cygwin64/bin;" (getenv "PATH")))
-  (setq exec-path (cons "/cydrive/c/cygwin64/bin/" exec-path))
-  :custom
-  (cygwin-mount-cygwin-bin-directory "C:/cygwin64/bin/")
-  :config
-  (cygwin-mount-activate)
-  )
-
-(use-package setup-cygwin
-  :load-path "c:/cygwin64/home/ybks/.emacs.d/lib/")
-
-(use-package company-shell
-  ;; company-shell - providing completions for binaries that are found on your $PATH
-  ;; company-fish-shell - providing completions for fish-shell's functions, both builtin as well as user-defined
-  ;; company-shell-env - providing completions for environment variables based on the env command
-  :ensure company
-  :config
-  (add-to-list 'company-backends '(company-shell company-fish-shell company-shell-env))
-  )
-
-(use-package shell
-  :ensure nil
-  ;; :disabled
-  :bind ("C-c t" . shell)
-  :commands comint-send-string comint-simple-send comint-strip-ctrl-m
-  :hook ((shell-mode . ansi-color-for-comint-mode-on)
-         (shell-mode . n-shell-mode-hook)
-         (comint-output-filter-functions . comint-strip-ctrl-m))
-  :bind (:map shell-mode-map
-              ([tab] . company-manual-begin))
-  :init
-  (setq system-uses-terminfo nil)
-
-  ;; File path clickable
-  (add-hook 'shell-mode-hook 'compilation-shell-minor-mode)
-
-  ;; Make URL clikable
-  (add-hook 'shell-mode-hook (lambda () (goto-address-mode )))
-
-  ;;  company
-  (add-hook 'shell-mode-hook #'company-mode)
-
-  (defun n-shell-simple-send (proc command)
-    "Various PROC COMMANDs pre-processing before sending to shell."
-    (cond
-     ;; Checking for clear command and execute it.
-     ((string-match "^[ \t]*clear[ \t]*$" command)
-      (comint-send-string proc "\n")
-      (erase-buffer))
-     ;; Checking for man command and execute it.
-     ((string-match "^[ \t]*man[ \t]*" command)
-      (comint-send-string proc "\n")
-      (setq command (replace-regexp-in-string "^[ \t]*man[ \t]*" "" command))
-      (setq command (replace-regexp-in-string "[ \t]+$" "" command))
-      ;;(message (format "command %s command" command))
-      (funcall 'man command))
-     ;; Send other commands to the default handler.
-     (t (comint-simple-send proc command))))
-
-  (defun n-shell-mode-hook ()
-    "Shell mode customizations."
-    (local-set-key '[up] 'comint-previous-input)
-    (local-set-key '[down] 'comint-next-input)
-    (local-set-key '[right] 'comint-next-matching-input-from-input)
-    (setq comint-input-sender 'n-shell-simple-send)))
-
-;; ANSI & XTERM 256 color support
-(use-package xterm-color
-  :defines (compilation-environment
-            eshell-preoutput-filter-functions
-            eshell-output-filter-functions)
-  :functions (compilation-filter my-advice-compilation-filter)
-  :init
-  ;; For shell
-  (setenv "TERM" "xterm-256color")
-  (setq comint-output-filter-functions
-        (remove 'ansi-color-process-output comint-output-filter-functions))
-  (add-hook 'shell-mode-hook
-            (lambda ()
-              ;; Disable font-locking in this buffer to improve performance
-              (font-lock-mode -1)
-              ;; Prevent font-locking from being re-enabled in this buffer
-              (make-local-variable 'font-lock-function)
-              (setq font-lock-function (lambda (_) nil))
-              (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))
-
-  ;; For eshell
-  (with-eval-after-load 'esh-mode
-    (add-hook 'eshell-before-prompt-hook
-              (lambda ()
-                (setq xterm-color-preserve-properties t)))
-    (add-to-list 'eshell-preoutput-filter-functions 'xterm-color-filter)
-    (setq eshell-output-filter-functions
-          (remove 'eshell-handle-ansi-color eshell-output-filter-functions)))
-
-  ;; For compilation buffers
-  (setq compilation-environment '("TERM=xterm-256color"))
-  (defun my-advice-compilation-filter (f proc string)
-    (funcall f proc
-             (if (eq major-mode 'rg-mode) ; compatible with `rg'
-                 string
-               (xterm-color-filter string))))
-  (advice-add 'compilation-filter :around #'my-advice-compilation-filter)
-  (advice-add 'gud-filter :around #'my-advice-compilation-filter)
-
-  ;; For prolog inferior
-  (with-eval-after-load 'prolog
-    (add-hook 'prolog-inferior-mode-hook
-              (lambda ()
-                (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))))
-
-;; Better term
-;; @see https://github.com/akermu/emacs-libvterm#installation
-(when (and (executable-find "cmake")
-           (executable-find "libtool")
-           (executable-find "make"))
-  (use-package vterm
-    :init (defalias #'term #'vterm)))
-
-;; Shell Pop
-(use-package shell-pop
-  :ensure t
-  :bind (:map my-personal-map
-              ("x" . shell-pop))
-  :custom
-  (shell-pop-set-internal-mode "shell")
-  (shell-pop-set-internal-mode-shell "/bin/bash")
-  (shell-pop-set-window-position "bottom")
-  :config
-  ;; need to do this manually or not picked up by `shell-pop'
-  ;; (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type)
-  )
 
 
 ;;;; Eshell
@@ -2510,26 +1641,6 @@ In that case, insert the number."
   :ensure nil
   :defines eshell-prompt-function
   :functions eshell/alias
-  ;; :init
-  ;; ;; Use Cygwin for shell
-  ;; ;; https://stackoverflow.com/questions/235254/how-can-i-run-cygwin-bash-shell-from-within-emacs
-  ;; ;; When running in Windows, we want to use an alternate shell so we
-  ;; ;; can be more unixy.
-  ;; (add-hook 'comint-output-filter-functions
-  ;;           'shell-strip-ctrl-m nil t)
-  ;; (add-hook 'comint-output-filter-functions
-  ;;           'comint-watch-for-password-prompt nil t)
-  
-  ;; (setq shell-file-name "C:/cygwin64/bin/bash")
-  ;; (setq explicit-shell-file-name shell-file-name)
-  ;; (setenv "PATH"
-  ;;         (concat ".:/usr/local/bin:/usr/bin:/bin:"
-  ;;                 (replace-regexp-in-string " " "\\\\ "
-  ;;                                           (replace-regexp-in-string "\\\\" "/"
-  ;;                                                                     (replace-regexp-in-string "\\([A-Za-z]\\):" "/\\1"
-  ;;                                                                                               (getenv "PATH"))))))
-
-  
   :bind (:map my-personal-map
               ("s" . eshell))
   :hook (eshell-mode . (lambda ()
@@ -2559,7 +1670,6 @@ In that case, insert the number."
                          (eshell/alias "cdf" "cd F:/Prosjekter/Kommunehelsa")
                          (eshell/alias "cdt" "cd f:/Prosjekter/Kommunehelsa/TESTOMRAADE/TEST_KHFUN")))
   :config
-  
   (setq eshell-list-files-after-cd t) ;ls after cd
 
   (with-no-warnings
@@ -2670,28 +1780,56 @@ In that case, insert the number."
   (eshell-git-prompt-use-theme 'powerline)
   )
 
-;; ;; Disable company-mode for eshell, falling back to pcomplete,
-;; ;; which feels more natural for a shell.
-;; (add-hook 'eshell-mode-hook
-;;           (lambda ()
-;;             (company-mode 0)))
+;; Shell Pop
+(use-package shell-pop
+  :ensure t
+  :defer 2
+  :bind (:map my-personal-map
+              ("x" . shell-pop))
+  ;; :bind ([f9] . shell-pop)
+  :custom
+  (shell-pop-full-span t)
+  (shell-pop-shell-type '("eshell" "*eshell" (lambda nil (eshell))))
+  :config
+  ;; ;;shell terminal
+  ;; (setq shell-pop-shell-type (quote ("ansi-term" "*ansi-term*" (lambda nil (ansi-term shell-pop-term-shell)))))
+  ;; (setq shell-pop-term-shell "/bin/bash")
+  ;; (setq shell-pop-universal-key "C-t") ;use for eshell keybind
 
-;; ;; When completing with multiple options, complete only as much as
-;; ;; possible and wait for further input.
-;; (setq eshell-cmpl-cycle-completions nil)
+  ;; need to do this manually or not picked up by `shell-pop'
+  (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type)
+  )
 
 
 ;;; Code folding
+(use-package outshine
+  ;; Hide/show header for easy navigation to give a feel of Org Mode
+  ;; outside Org major-mode. Use <C-M i> or <S-Tab>
+  ;; use set-selective-display (C-x $) for ad-hock prefix argument
+  :ensure t
+  :defer 3
+  :bind (:map outshine-mode-map
+              ("<S-<backtab>" . outshine-cycle-buffer)
+              ;; ("<backtab>" . outshine-cycle-buffer) ;; For Windows
+              )
+  :hook ((emacs-lisp-mode ess-r-mode prog-mode) . outshine-mode)
+  :config
+  (setq outshine-cycle-emulate-tab t))
+
 (use-package hideshow
   :bind (("C-c TAB" . hs-toggle-hiding)
          ;; ("C-c h" . hs-toggle-hiding)
-         ("M-+" . hs-show-all))
+         ("M-+" . hs-show-all)
+         :map my-assist-map
+         ("-" . hs-toggle-hiding)
+         ("+" . hs-show-all)
+         )
   :init (add-hook #'prog-mode-hook #'hs-minor-mode)
   :diminish hs-minor-mode
   :config
   ;; Automatically open a block if you search for something where it matches
   (setq hs-isearch-open t)
-  
+
   ;; Add `json-mode' and `javascript-mode' to the list
   (setq hs-special-modes-alist
         (mapcar 'purecopy
@@ -2725,45 +1863,6 @@ showing them."
           (setq-local eos/hs-fold-show-only-methods-active-p t)))))
 
   (global-set-key (kbd "C-c h") 'eos/hs-fold-show-only-methods)
-  )
-
-;; (use-package hideshow
-;;   :bind (:map prog-mode-map
-;;               ("C-c h" . hs-toggle-hiding)))
-
-(use-package origami
-  ;; Code folding
-  :defer 3
-  :after hydra
-  :bind(:map my-assist-map
-             ("o" . hydra-origami/body)
-             ;; ("C-c f" . 'origami-toggle-node)
-             )
-  :config
-  (global-origami-mode)
-  (defhydra hydra-origami (:color red)
-    "
-        _o_pen node    _n_ext fold       toggle _f_orward
-        _c_lose node   _p_revious fold   toggle _a_ll
-        "
-    ("o" origami-open-node)
-    ("c" origami-close-node)
-    ("n" origami-next-fold)
-    ("p" origami-previous-fold)
-    ("f" origami-forward-toggle-node)
-    ("a" origami-toggle-all-nodes))
-  )
-
-
-;;; Documentation
-
-(use-package eldoc
-  ;; Show argument list of function call at echo area
-  :hook ((c-mode-common
-          emacs-lisp-mode
-          lisp-interaction-mode
-          eval-expression-minibuffer-setup
-          ielm-mode) . eldoc-mode)
   )
 
 
@@ -2864,13 +1963,6 @@ showing them."
 (use-package ztree
   ;;Had diff mode with M-x ztree-diff or ordinary tree with ztree-dir
   ;; https://github.com/fourier/ztree
-  ;; h - show/hide identical files/dir
-  ;; H - show/hide hidden/ignored files/dir
-  ;; C - copy current file/dir to the left/right panel
-  ;; D - delete current file/dir
-  ;; v - quick view of current file
-  ;; r - rescan/refresh
-  ;; F5 - full rescan
   :ensure t
   :bind (
          :map my-personal-map
@@ -2890,7 +1982,9 @@ showing them."
 ;; C-c C-d C-e ess-describe-object-at-point
 (use-package ess-mode
   :ensure ess
-  :commands run-ess-r-newest
+  ;; ;;-disabled since R-4.0.0 has problem with Rcpp
+  ;; ;; use R version specified in ess-r-mode :custom below
+  ;; :commands run-ess-r-newest
   :bind ((:map my-personal-map
                ("r" . run-ess-r-newest))
          (:map inferior-ess-mode-map
@@ -2934,7 +2028,7 @@ showing them."
          ("C-." . ess-eval-paragraph-and-step)
          ("M-." . ess-eval-paragraph-and-go)
          ("C-S-<tab>" . ess-indent-region-with-styler)
-         
+
          :map inferior-ess-r-mode-map
          ("C-S-<up>" . ess-readline) ;previous command from script
          ("M--" . ess-cycle-assign)
@@ -2942,14 +2036,14 @@ showing them."
          )
 
   :custom
+  (inferior-R-program-name "c:/Program Files/R/R-3.6.3/bin/R.exe")
+  ;; (inferior-ess-r-program "R") ;this will run the newest file
   (ess-plain-first-buffername nil "Name first R process R:1")
   (ess-tab-complete-in-script t "TAB should complete.")
-  (inferior-R-program-name "c:/Program Files/R/R-4.0.0/bin/x64/Rterm.exe")
-  ;; (inferior-R-program-name "c:/Program Files/R/R-3.6.3/bin/x64/Rterm.exe")
   (ess-style 'RStudio)
   ;; (ess-use-company t "ESS company")
   (ess-use-auto-complete 'script-only "use auto-complete instead of company")
-  
+
   :config
   ;; Must-haves for ESS
   ;; http://www.emacswiki.org/emacs/CategoryESS
@@ -2972,16 +2066,16 @@ showing them."
             (lambda()
               (setq-local comint-use-prompt-regexp nil)
               (setq-local inhibit-field-text-motion nil)))
-  
+
   ;; ;; Don't indent comments with one #
   ;; (defun my-ess-settings ()
   ;;   (setq ess-indent-with-fancy-comments nil))
   ;; (add-hook 'ess-mode-hook #'my-ess-settings)
-  
+
   ;; ess-trace-bug.el
   (setq ess-use-tracebug t) ; permanent activation
   (setq ess-tracebug-inject-source-p t)
-  
+
   ;;
   ;; Tooltip included in ESS
   (setq ess-describe-at-point-method 'tooltip) ; 'tooltip or nil (buffer)
@@ -3266,85 +2360,6 @@ if there is displayed buffer that have shell it will use that window"
   :ensure t
   :mode (("\\.yml\\'" . yaml-mode)))
 
-;;; Python
-(use-package python
-  ;; The package is called python, the mode is python-mode. Confusingly, there's
-  ;; also python-mode.el but I don't use that.
-  :defer t
-  :bind
-  (:map python-mode-map
-        ("C-<return>" . my/python-shell-send-region-or-statement-and-step))
-  :custom
-  ;; Use flake8 for flymake:
-  (python-flymake-command '("flake8" "-"))
-  (python-indent-guess-indent-offset-verbose nil)
-  (python-indent-offset 4)
-  (python-eldoc-function-timeout-permanent nil)
-  :config
-  (defun my/python-shell-send-region-or-statement ()
-    "Send the current region to the inferior python process if there is an active one, otherwise the current line."
-    (interactive)
-    (if (use-region-p)
-        (python-shell-send-region (region-beginning) (region-end))
-      (my/python-shell-send-statement)))
-  (defun my/python-shell-send-statement ()
-    "Send the current line to the inferior python process for evaluation."
-    (interactive)
-    (save-excursion
-      (let ((end (python-nav-end-of-statement))
-            (beginning (python-nav-beginning-of-statement)))
-        (python-shell-send-region beginning end))))
-  (defun my/python-shell-send-region-or-statement-and-step ()
-    "Call `python-shell-send-region-or-statement' and then `python-nav-forward-statement'."
-    (interactive)
-    (my/python-shell-send-region-or-statement)
-    (python-nav-forward-statement))
-  (define-minor-mode my/python-use-ipython-mode
-    ;; I don't really get the allure of ipython, but here's something that
-    ;; lets me switch back and forth:
-    "Make python mode use the ipython interpreter."
-    :lighter (" iPy")
-    (unless (executable-find "ipython")
-      (error "Could not find ipython executable"))
-    (if my/python-use-ipython-mode
-        ;; activate ipython stuff
-        (setq python-shell-buffer-name "Ipython"
-              python-shell-interpreter "ipython"
-              ;; https://emacs.stackexchange.com/q/24453/115
-              ;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=25306
-              python-shell-interpreter-args "--simple-prompt -i")
-      ;; else, deactivate everything
-      (setq python-shell-buffer-name "Python"
-            python-shell-interpreter "python" ;python3
-            python-shell-interpreter-args "-i")))
-  )
-
-;;; Database
-(use-package sql
-  :ensure t
-  :mode ("\\.\\(sqlite\\|db\\|sqlite3\\)\\'" . sql-mode)
-  :interpreter ("sql" . sql-mode)
-  :custom
-  (sql-sqlite-program "c:/Program Files/R/sqlite/sqlite3.exe")
-
-  ;; use only one database no need to login
-  (defalias 'sql-get-login 'ignore)
-  )
-
-(use-package sqlup-mode
-  ;;Upercase SQL words
-  :ensure t
-  :bind ("C-c u" . sqlup-capitalize-keywords-in-region)
-  :hook ((sql-mode sql-interactive-mode redis-mode) . sqlup-mode)
-  )
-
-;;; Graphics
-(use-package graphviz-dot-mode
-  ;; graphvis must be installed
-  ;; :ensure t
-  ;; :pin melpa-stable
-  :mode "\\.dot\\'")
-
 
 
 ;;; Appearance
@@ -3365,18 +2380,13 @@ if there is displayed buffer that have shell it will use that window"
   (doom-themes-org-config)
 
   ;; utk tukar tema f10-t
-  (setq my-themes '(
-                    doom-gruvbox
-                    doom-fairy-floss
+  (setq my-themes '(doom-nord
+                    doom-nord-light
+                    doom-vibrant
                     doom-acario-light
-                    ;; doom-nord-light
-                    doom-snazzy
+                    doom-gruvbox
                     doom-tomorrow-day
-                    ;; doom-opera-light
                     doom-solarized-dark
-                    ;; doom-opera
-                    ;; doom-oceanic-next
-                    ;; doom-Iosvkem ;bold has bigger font
                     ))
 
   (setq my-cur-theme nil)
@@ -3469,26 +2479,6 @@ if there is displayed buffer that have shell it will use that window"
                ))
 
 
-
-(use-package all-the-icons
-  :ensure t
-  :defer 0.5)
-
-;; (use-package all-the-icons
-;;   ;; needed to display icon correctly in doom-modeline
-;;   :ensure t
-;;   :init
-;;   (defun aorst/font-installed-p (font-name)
-;;     "Check if font with FONT-NAME is available."
-;;     (if (find-font (font-spec :name font-name))
-;;         t
-;;       nil))
-;;   :config
-;;   (when (and (not (aorst/font-installed-p "all-the-icons"))
-;;              (window-system))
-;;     (all-the-icons-install-fonts t))
-;;   )
-
 (use-package doom-modeline
   ;; Run M-x all-the-icons-install-fonts to install all-the-icons
   :ensure t
@@ -3536,530 +2526,3 @@ The icons may not be showed correctly in terminal and on Windows.")
     LaTeX-mode) . rainbow-mode)
   )
 
-
-;;; Org
-;; All settings are mainly copied from https://gitlab.com/jabranham/emacs/blob/master/init.el
-;; Nice guides for org-mode options http://www.pangloss.com/wiki/Emacs
-
-(use-package ob-core
-  ;; ob is org-babel, which lets org know about code and code blocks
-  :ensure org
-  :defer t
-  :custom
-  ;; I know what I'm getting myself into.
-  (org-confirm-babel-evaluate nil "Don't ask to confirm evaluation."))
-
-
-(use-package org
-  ;; to be sure we have the latest Org version
-  :ensure org-plus-contrib
-  ;; Org mode is a great thing. I use it for writing academic papers,
-  ;; managing my schedule, managing my references and notes, writing
-  ;; presentations, writing lecture slides, and pretty much anything
-  ;; else.
-  :bind
-  (("C-c l" . org-store-link)
-   ("C-'" . org-cycle-agenda-files) ; quickly access agenda files
-   :map org-mode-map
-   ("C-a" . org-beginning-of-line)
-   ("C-e" . org-end-of-line)
-   ;; Bind M-p and M-n to navigate heading more easily (these are bound to
-   ;; C-c C-p/n by default):
-   ("M-p" . my/org-previous-visible-heading)
-   ("M-n" . my/org-next-visible-heading)
-   ;; C-c C-t is bound to `org-todo' by default, but I want it
-   ;; bound to C-c t as well:
-   ("C-c t" . org-todo)
-   ;; Toggle link or use font-lock
-   ("M-L" . my/org-toggle-link-display)
-   :map my-personal-map
-   ("t" . org-set-tags-command) ;C-c C-q
-   ("l" . org-toggle-pretty-entities) ;sub/superscripts display
-   )
-  :hook
-  (org-mode . my/setup-org-mode)
-  :init
-  ;; create org folder if doesn't exist
-  (defvar my-org-directory "c:/org")
-  (unless (file-exists-p my-org-directory)
-    (make-directory my-org-directory))
-  :custom
-  (org-directory "C:/org/")
-  (org-blank-before-new-entry nil)
-  (org-cycle-separator-lines 0)
-  (org-pretty-entities t "UTF8 all the things!")
-  ;; (org-pretty-entities-include-sub-superscripts t "Render sub or supscripts in org buffers")
-  ;; (org-use-superscripts '{} "Allow sub/superscripts if wrapped in braces")
-  ;; (org-export-with-sub-superscripts nil)
-  (org-fontify-emphasized-text nil "Turn off funtification for marked up text sup/subscript")
-  (org-support-shift-select t "Holding shift and moving point should select things.")
-  (org-fontify-quote-and-verse-blocks t "Provide a special face for quote and verse blocks.")
-  (org-M-RET-may-split-line nil "M-RET may never split a line.")
-  (org-enforce-todo-dependencies t "Can't finish parent before children.")
-  (org-enforce-todo-checkbox-dependencies t "Can't finish parent before children.")
-  (org-hide-emphasis-markers t "Make words italic or bold, hide / and *.")
-  (org-catch-invisible-edits 'show-and-error "Don't let me edit things I can't see.")
-  (org-special-ctrl-a/e t "Make C-a and C-e work more like how I want:.")
-  (org-preview-latex-default-process 'imagemagick "Let org's preview mechanism use imagemagick instead of dvipng.")
-  ;; Let imenu go deeper into menu structure
-  (org-imenu-depth 6)
-  (org-image-actual-width '(300))
-  (org-blank-before-new-entry '((heading . nil)
-                                (plain-list-item . nil)))
-  ;; For whatever reason, I have to explicitely tell org how to open pdf
-  ;; links.  I use pdf-tools.  If pdf-tools isn't installed, it will use
-  ;; doc-view (shipped with Emacs) instead.
-  (org-file-apps
-   '((auto-mode . emacs)
-     ("\\.mm\\'" . default)
-     ("\\.x?html?\\'" . default)
-     ("\\.pdf\\'" . emacs)))
-  (org-highlight-latex-and-related '(latex entities) "set up fontlocking for latex")
-  (org-startup-with-inline-images t "Show inline images.")
-  (org-log-done 'time)
-  (org-goto-interface 'outline-path-completion)
-  (org-ellipsis " ..>>")
-  ;; use C-c C-q for tags
-  (org-tag-persistent-alist '(("annent" . ?a)
-                              ("fhprofil" . ?p)
-                              (:startgroup . nil)
-                              ("@work" . ?w)
-                              ("@home" . ?h)
-                              (:endgroup . nil)))
-
-
-
-  
-  
-  :custom-face
-  (org-block ((t (:inherit default))))
-
-  :config
-  ;; remove C-c [ from adding or excluding org file to front of agenda
-  ;; other then those specified in org-agenda-files
-  (unbind-key "C-c [" org-mode-map)
-  (unbind-key "C-c ]" org-mode-map)
-
-  ;; Org-refile lets me quickly move around headings in org files.  It
-  ;; plays nicely with org-capture, which I use to turn emails into TODOs
-  ;; easily (among other things, of course)
-  (setq org-outline-path-complete-in-steps nil)
-  (setq org-refile-allow-creating-parent-nodes (quote confirm))
-  (setq org-refile-use-outline-path t)
-  (setq org-refile-targets '((org-agenda-files . (:maxlevel . 6)))) ;up to 6 level deep headlines
-
-  ;; Exclude DONE state tasks from refile targets
-  (defun ybk/verify-refile-target ()
-    "Exclude todo keywords with a done state from refile targets"
-    (not (member (nth 2 (org-heading-components)) org-done-keywords)))
-
-  (setq org-refile-target-verify-function 'ybk/verify-refile-target)
-
-  
-  ;; These are the programming languages org should teach itself:
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((emacs-lisp . t)
-     (latex . t)
-     (python . t)
-     (R . t)
-     (shell . t)))
-  ;; remove C-c [ from adding org file to front of agenda
-  (unbind-key "C-c [" org-mode-map)
-
-  (defun my/setup-org-mode ()
-    "Setup org-mode."
-    ;; An alist of symbols to prettify, see `prettify-symbols-alist'.
-    ;; Whether the symbol actually gets prettified is controlled by
-    ;; `org-pretty-compose-p', which see.
-    (setq-local prettify-symbols-unprettify-at-point nil)
-    ;; (setq-local prettify-symbols-alist '(("*" . ?>)))
-    (setq-local prettify-symbols-compose-predicate #'my/org-pretty-compose-p))
-
-  (defun my/org-next-visible-heading (arg)
-    "Go to next heading and beginning of line."
-    (interactive "p")
-    (org-next-visible-heading arg)
-    (org-beginning-of-line))
-
-  (defun my/org-previous-visible-heading (arg)
-    "Go to previous heading and beginning of line."
-    (interactive "p")
-    (org-previous-visible-heading arg)
-    (org-beginning-of-line))
-
-  (defun my/org-pretty-compose-p (start end match)
-    "Return t if the symbol should be prettified.
-START and END are the start and end points, MATCH is the string
-match.  See also `prettify-symbols-compose-predicate'."
-    (if (string= match "*")
-        ;; prettify asterisks in headings
-        (and (org-match-line org-outline-regexp-bol)
-             (< end (match-end 0)))
-      ;; else rely on the default function
-      (prettify-symbols-default-compose-p start end match)))
-
-  ;; use font-lock-mode or this function
-  (defun my/org-toggle-link-display ()
-    "Toggle the literal or descriptive display of links."
-    (interactive)
-    (if org-descriptive-links
-        (progn (org-remove-from-invisibility-spec '(org-link))
-               (org-restart-font-lock)
-               (setq org-descriptive-links nil))
-      (progn (add-to-invisibility-spec '(org-link))
-             (org-restart-font-lock)
-             (setq org-descriptive-links t))))
-
-  ;; TODO keywords
-  (setq org-todo-keywords
-        (quote ((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d)")
-                (sequence "HOLD(h@/!)" "CANCELLED(c@/!)"))))
-
-  ;;Menyenagkan utk tukar kekunci TODO dengan C-c C-t KEKUNCI (org-todo-keywords)
-  (setq org-use-fast-todo-selection t)
-
-  ;;Tetapkan warna keyword
-  (setq org-todo-keyword-faces
-        (quote (("TODO" :foreground "red" :weight bold)
-                ("NEXT" :foreground "purple" :weight bold)
-                ("DONE" :foreground "forest green" :weight bold)
-                ("HOLD" :foreground "magenta" :weight bold)
-                ("CANCELLED" :foreground "forest green" :weight bold)
-                )))
-
-
-  ;;== Buat TAGS automatik
-  ;; Status TODO memberikan atau menukarkan tag secara automatisk. Cth ke status 'HOLD'
-  ;; memberikan tag 'HOLD' dan ke status 'DONE' membuang tag 'HOLD' dan 'CANCELLED'
-  (setq org-todo-state-tags-triggers
-        (quote (("CANCELLED" ("CANCELLED" . t))
-                ("HOLD" ("HOLD" . t))
-                (done ("HOLD"))
-                ("TODO" ("CANCELLED") ("HOLD"))
-                ("NEXT" ("CANCELLED") ("HOLD"))
-                ("DONE" ("CANCELLED") ("HOLD")))))
-
-  ;; Utk tukar status TODO menggunakan S-kiri dan S-kanan dan elakkan proses biasa seperti memasukkan masa
-  ;; atau nota utk HOLD atau CANCELLED sekiranya yang ingin dibuat ialah pertukaran status TODO sahaja
-  (setq org-treat-S-cursor-todo-selection-as-state-change nil)
-
-  ;;== Tukar parents status ke "DONE" hanya bila semua child tasks sudah ke status "DONE"
-  (setq org-enforce-todo-dependencies t
-        org-enforce-todo-checkbox-dependencies t)
-
-  ;;== Masukkan annotation di task bila tukar status
-  (setq org-log-done (quote time))
-
-  ;;== Masukkan annotation bila tukar tarikh DEADLINE
-  (setq org-log-redeadline (quote time))
-
-  ;;== Masukkan annotation bila tukar tarikh SCHEDULE
-  (setq org-log-reschedule (quote time))
-
-  
-  ;; to enable <s[TAB] https://github.com/syl20bnr/spacemacs/issues/11798
-  ;; else M-x org-insert-structure-template
-  (require 'org-tempo)
-
-  ;; Code block shortcuts instead of <s[TAB]
-  (defun my-org-insert-src-block (src-code-type)
-    "Insert a `SRC-CODE-TYPE' type source code block in org-mode."
-    (interactive
-     (let ((src-code-types
-            '("emacs-lisp" "python" "sh" "calc" "R" "latex")))
-       (list (ivy-completing-read "Source code type: " src-code-types))))
-    (progn
-      (newline-and-indent)
-      (insert "#+END_SRC\n")
-      (previous-line 2)
-      (insert (format "#+BEGIN_SRC %s\n" src-code-type))
-      (org-edit-src-code)))
-
-  (bind-key "C-c s" #'my-org-insert-src-block org-mode-map)
-
-  ;; surround command https://github.com/alphapapa/unpackaged.el#surround-region-with-emphasis-or-syntax-characters
-  ;; block the text and use the surround selected KEY
-  ;;###autoload
-  (defmacro unpackaged/def-org-maybe-surround (&rest keys)
-    "Define and bind interactive commands for each of KEYS that surround the region or insert text.
-Commands are bound in `org-mode-map' to each of KEYS.  If the
-region is active, commands surround it with the key character,
-otherwise call `org-self-insert-command'."
-    `(progn
-       ,@(cl-loop for key in keys
-                  for name = (intern (concat "unpackaged/org-maybe-surround-" key))
-                  for docstring = (format "If region is active, surround it with \"%s\", otherwise call `org-self-insert-command'." key)
-                  collect `(defun ,name ()
-                             ,docstring
-                             (interactive)
-                             (if (region-active-p)
-                                 (let ((beg (region-beginning))
-                                       (end (region-end)))
-                                   (save-excursion
-                                     (goto-char end)
-                                     (insert ,key)
-                                     (goto-char beg)
-                                     (insert ,key)))
-                               (call-interactively #'org-self-insert-command)))
-                  collect `(define-key org-mode-map (kbd ,key) #',name))))
-
-  ;; activate surround command
-  (unpackaged/def-org-maybe-surround "~" "=" "*")
-
-
-  )
-
-
-(use-package org-agenda
-  :ensure org
-  :bind
-  (("C-c a" . org-agenda)
-   ("C-'" . org-cycle-agenda-files) ; quickly access agenda files
-   :map org-agenda-mode-map
-   ("v" . hydra-org-agenda-view/body)
-   ("r" . org-agenda-refile) ; overrides org-agenda-redo, which I use "g" for anyway
-   ("s" . org-agenda-schedule) ; overrides saving all org buffers, also bound to C-x C-s
-   ("n" . my/org-agenda-mark-next) 
-   ("d" . my/org-agenda-mark-done)) ; overrides org-exit
-  :init
-  (defvar my-org-todo (expand-file-name "todo.org" my-org-directory)
-    "Unstructure capture")
-  (defvar my-org-misc (expand-file-name "misc.org" my-org-directory)
-    "All other info for diary.")
-  (defvar my-org-note (expand-file-name "notes.org" my-org-directory)
-    "All other info for diary.")
-  
-  ;; Hydra http://oremacs.com/2016/04/04/hydra-doc-syntax/
-  (defun org-agenda-cts ()
-    (let ((args (get-text-property
-                 (min (1- (point-max)) (point))
-                 'org-last-args)))
-      (nth 2 args)))
-
-  (defhydra hydra-org-agenda-view (:hint none)
-    "
-    _d_: ?d? day        _g_: time grid=?g? _a_: arch-trees    _l_: show-log
-    _w_: ?w? week       _[_: inactive      _A_: arch-files    _L_: log-4
-    _t_: ?t? fortnight  _f_: follow=?f?    _r_: report=?r?    _c_: clockcheck
-    _m_: ?m? month      _e_: entry =?e?    _D_: diary=?D?
-    _y_: ?y? year     _SPC_: reset         _!_: deadline      _q_: quit"
-    ("SPC" org-agenda-reset-view)
-    ("d" org-agenda-day-view
-     (if (eq 'day (org-agenda-cts))
-         "[x]" "[ ]"))
-    ("w" org-agenda-week-view
-     (if (eq 'week (org-agenda-cts))
-         "[x]" "[ ]"))
-    ("t" org-agenda-fortnight-view
-     (if (eq 'fortnight (org-agenda-cts))
-         "[x]" "[ ]"))
-    ("m" org-agenda-month-view
-     (if (eq 'month (org-agenda-cts)) "[x]" "[ ]"))
-    ("y" org-agenda-year-view
-     (if (eq 'year (org-agenda-cts)) "[x]" "[ ]"))
-    ("l" org-agenda-log-mode
-     (format "% -3S" org-agenda-show-log))
-    ("L" (org-agenda-log-mode '(4)))
-    ("c" (org-agenda-log-mode 'clockcheck))
-    ("f" org-agenda-follow-mode
-     (format "% -3S" org-agenda-follow-mode))
-    ("a" org-agenda-archives-mode)
-    ("A" (org-agenda-archives-mode 'files))
-    ("r" org-agenda-clockreport-mode
-     (format "% -3S" org-agenda-clockreport-mode))
-    ("e" org-agenda-entry-text-mode
-     (format "% -3S" org-agenda-entry-text-mode))
-    ("g" org-agenda-toggle-time-grid
-     (format "% -3S" org-agenda-use-time-grid))
-    ("D" org-agenda-toggle-diary
-     (format "% -3S" org-agenda-include-diary))
-    ("!" org-agenda-toggle-deadlines)
-    ("["
-     (let ((org-agenda-include-inactive-timestamps t))
-       (org-agenda-check-type t 'timeline 'agenda)
-       (org-agenda-redo)))
-    ("q" (message "Abort") :exit t))
-
-  :custom
-  ;;Include all files under these folder in org-agenda-files
-  (org-agenda-files (quote ("c:/org/misc.org"
-                            "c:/org/refile.org"
-                            "c:/org/notes.org"
-                            "c:/org/todo.org"
-                            )))
-
-  (org-agenda-skip-deadline-if-done t "Remove done deadlines from agenda.")
-  (org-agenda-skip-scheduled-if-done t "Remove done scheduled from agenda.")
-  (org-agenda-skip-timestamp-if-done t "Don't show timestamped things in agenda if they're done.")
-  (org-agenda-skip-scheduled-if-deadline-is-shown 'not-today "Don't show scheduled if the deadline is visible unless it's also scheduled for today.")
-  (org-agenda-skip-deadline-prewarning-if-scheduled 'pre-scheduled "Skip deadline warnings if it is scheduled.")
-  (org-deadline-warning-days 3 "warn me 3 days before a deadline")
-  (org-agenda-tags-todo-honor-ignore-options t "Ignore scheduled items in tags todo searches.")
-  (org-agenda-tags-column 'auto)
-  (org-agenda-window-setup 'only-window "Use current window for agenda.")
-  (org-agenda-restore-windows-after-quit t "Restore previous config after I'm done.")
-  (org-agenda-span 'day) ; just show today. I can "vw" to view the week
-  (org-agenda-time-grid
-   '((daily today remove-match) (800 1000 1200 1400 1600 1800 2000)
-     "" "") "By default, the time grid has a lot of ugly '-----' lines. Remove those.")
-  (org-agenda-scheduled-leaders '("" "%2dx ") "I don't need to know that something is scheduled.  That's why it's appearing on the agenda in the first place.")
-  (org-agenda-block-separator ?_  "Use nice unicode character instead of ugly = to separate agendas:")
-  (org-agenda-deadline-leaders '("Deadline: " "In %d days: " "OVERDUE %d day: ") "Make deadlines, especially overdue ones, stand out more:")
-  (org-agenda-current-time-string "<-- Nå")
-  ;; Display format
-  ;; (org-agenda-prefix-format '((agenda  . "%-12 s%?-2t") ; (agenda . " %s %-12t ") or "%-12 s%?-2t" if want to show schedule/timeline
-  ;;                             (timeline . "%-9:T%?-2t%") ; "%-9:T%?-2t% s" if want to show deadline/schedule in timeline ie. s
-  ;;                             (todo . " +%i %t") ;%i%?-8:T tidak justify TODO
-  ;;                             (tags . " +%i %t") ;(tags . "%i %-8:T")
-  ;;                             (search . "%i %-8:T")))
-
-  ;; The agenda is ugly by default. It doesn't properly align items and it
-  ;; includes weird punctuation. Fix it:
-  (org-agenda-prefix-format '((agenda . "%-12c%-14t%s")
-                              (todo . " %i %-12:c")
-                              (tags . " %i %-12:c")
-                              (search . " %i %-12:c")))
-
-  ;; sorting todo keywords
-  (org-agenda-sorting-strategy
-   '((agenda habit-down time-up todo-state-down priority-down category-keep)
-     (todo priority-down category-keep)
-     (tags priority-down category-keep)
-     (search category-keep)))
-  
-  ;; Custom agenda
-  (org-agenda-custom-commands
-   '(
-     ("h" "Home Agenda"
-      ((agenda "" nil)
-       (todo "NEXT"
-             ((org-agenda-max-entries 5)
-              (org-agenda-overriding-header "Dagens oppgaver:")
-              ))
-       (tags "@home"
-             ((org-agenda-overriding-header "Samlet oppgaver:")
-              (org-agenda-tag-filter-preset '("-REFILE"))
-              (org-agenda-skip-function '(org-agenda-skip-entry-if 'nottodo '("TODO"))) ;don't show other than TODO
-              ))
-       (tags "REFILE"
-             ((org-agenda-overriding-header "Refile:")
-              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT"))))))
-      ((org-agenda-tag-filter-preset '("-@work"))))
-     ("w" "Work Agenda"
-      ((agenda "" nil)
-       (todo "NEXT"
-             ((org-agenda-max-entries 5)
-              (org-agenda-overriding-header "Dagens oppgaver:")
-              ))
-       (tags "@work"
-             ((org-agenda-overriding-header "Oppgavene som skal gjøres:")
-              (org-agenda-tag-filter-preset '("-REFILE"))
-              ;; (org-agenda-skip-function '(org-agenda-skip-entry-if 'nottodo '("TODO"))) ;don't show other than TODO
-              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT")))
-              ))
-       (tags "REFILE"
-             ((org-agenda-overriding-header "Refile:")
-              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT"))))))
-      ((org-agenda-tag-filter-preset '("-@home"))))
-     ("d" "deadlines"
-      ((agenda ""
-               ((org-agenda-entry-types '(:deadline))
-                (org-agenda-span 'fortnight)
-                (org-agenda-time-grid nil)
-                (org-deadline-warning-days 0)
-                (org-agenda-skip-deadline-prewarning-if-scheduled nil)
-                (org-agenda-skip-deadline-if-done nil)))))
-     ("b" "bibliography"
-      ((tags "CATEGORY=\"bib\"+LEVEL=2"
-             ((org-agenda-overriding-header "")))))
-     ("u" "unscheduled"
-      ((todo  "TODO"
-              ((org-agenda-overriding-header "Unscheduled tasks")
-               (org-agenda-todo-ignore-with-date t)))))))
-
-  :config
-  (defun my/org-agenda-mark-done (&optional _arg)
-    "Mark current TODO as DONE.
-See `org-agenda-todo' for more details."
-    (interactive "P")
-    (org-agenda-todo "DONE"))
-
-  (defun my/org-agenda-mark-next (&optional _arg)
-    "Mark current TODO as NEXT.
-See `org-agenda-todo' for more details."
-    (interactive "P")
-    (org-agenda-todo "NEXT"))
-  )
-
-(use-package org-agenda-property
-  ;; Extra info from PROPERTIES to show in org-agenda
-  ;; https://github.com/Malabarba/org-agenda-property
-  :ensure t
-  :config
-  (setq org-agenda-property-list '("LOCATION")))
-
-
-(use-package org-capture
-  :ensure org
-  :bind*
-  (("C-c c" . org-capture)
-   ;; ("<f9>" . ybk/org-task-capture) ;just use C-c c t
-   )
-  :bind
-  ((:map org-capture-mode-map
-         ("C-c C-j" . my/org-capture-refile-and-jump)))
-  :init
-  (setq org-default-notes-file (concat org-directory "refile.org"))
-  (defconst my/org-inbox (concat org-directory "refile.org"))
-  (defconst my/org-notes (concat org-directory "notes.org"))
-  :custom
-  (org-capture-templates
-   (quote (("a" "Avtale" entry (file+headline org-default-notes-file "Avtale")
-            "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
-           ("t" "task" entry (file  my/org-inbox)
-            "* TODO \n:PROPERTIES:\n:CREATED: %U\n:END:\n%i")
-           ("m" "mail" entry (file my/org-inbox)
-            "* TODO [#A] %?\nSCHEDULED: %(org-insert-time-stamp (org-read-date nil t \"+0d\"))\n%a\n")
-           ("n" "note" entry (file my/org-notes)
-            "* %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n %i")
-           )))
-  :config
-  (defun my/org-capture-refile-and-jump ()
-    (interactive)
-    (org-capture-refile)
-    (org-refile-goto-last-stored))
-
-  ;; Org-capture shortcut
-  (defun ybk/org-task-capture ()
-    "Capture a task with my default template."
-    (interactive)
-    (org-capture nil "t"))
-  )
-
-;;; Extra
-;;;; Weather
-(use-package weather-metno
-  :ensure t
-  :bind (:map my-personal-map
-              ("w" . weather-metno-forecast))
-  :config
-  (setq weather-metno-location-name "Oslo, Norge"
-        weather-metno-location-latitude 59
-        weather-metno-location-longitude 10)
-
-  ;; ;; change icon size
-  ;; (setq weather-metno-use-imagemagick t)
-  ;; (setq weather-metno-get-image-props '(:width 10 :height 10 :ascent center))
-  (setq weather-metno-get-image-props '(:ascent center))
-  )
-;;;; Calculator
-(use-package calc
-  :ensure t
-  :defer t
-  :bind
-  ("<XF86Calculator>" . quick-calc)
-  ;; ("C-c =" . quick-calc)
-  (:map my-personal-map
-        ("c" . quick-calc)
-        ("C" . my/calc-eval-region)))
