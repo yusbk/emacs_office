@@ -944,11 +944,16 @@ command was called, go to its unstaged changes section."
         nil nil 'center))))
 
 
+
+;;; Diff text - ediff/diff
+
 (use-package smerge-mode
-  ;; For comparing conflict better than ediff
+  ;; For comparing conflict better than ediff with Magit
   ;; https://github.com/alphapapa/unpackaged.el#smerge-mode
   :ensure t
   :after hydra
+  :bind (:map my-assist-map
+              ("e" . my-smerge-hydra/body))
   :config
   (defhydra my-smerge-hydra
     (:color pink :hint nil :post (smerge-auto-leave))
@@ -986,6 +991,32 @@ _p_rev       _u_pper              _=_: upper/lower       _r_esolve
   :hook (magit-diff-visit-file . (lambda ()
                                    (when smerge-mode
                                      (my-smerge-hydra/body)))))
+
+;;;; Ediff
+;; In windows it's important to put Git/usr/bin to path to use diff.exe file
+(use-package ediff
+  ;; source https://oremacs.com/2015/01/17/setting-up-ediff/
+  :ensure nil
+  :bind (:map my-assist-map
+              ("E" . ediff))
+  :custom
+  (ediff-diff-options "-w" "ignore whitespace")
+  ;; (ediff-window-setup-function 'ediff-setup-windows-plain "Don't use separate frame for control panel")
+  (ediff-split-window-function 'split-window-horizontally)
+  :config
+  
+  ;; Bagi key bindings
+  (defun ora-ediff-hook ()
+    (ediff-setup-keymap)
+    (define-key ediff-mode-map "j" 'ediff-next-difference)
+    (define-key ediff-mode-map "k" 'ediff-previous-difference))
+
+  (add-hook 'ediff-mode-hook 'ora-ediff-hook)
+
+  ;; Pasang semula window configuration bila keluar (q)
+  ;; (winner-mode) ;aktifkan winner-mode kalau tidak dipasang secara global
+  (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
+  )
 
 
 ;;; Window and Buffer management
