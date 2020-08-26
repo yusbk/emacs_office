@@ -81,6 +81,10 @@
 ;; (bind-keys :prefix "C-c c"
 ;;            :prefix-map my-code-map)
 
+(unbind-key [f6])
+(bind-keys :prefix [f6]
+           :prefix-map my-prog-map)
+
 
 ;; Early unbind keys for customization
 (unbind-key "C-s") ; Reserve for search related commands
@@ -2013,10 +2017,7 @@ showing them."
 ;; C-c C-d C-e ess-describe-object-at-point
 (use-package ess-mode
   :ensure ess
-  ;; ;;-disabled since R-4.0.0 has problem with Rcpp
-  ;; ;; use R version specified in ess-r-mode :custom below
-  ;; :commands run-ess-r-newest
-  :bind ((:map my-personal-map
+  :bind ((:map my-prog-map
                ("r" . run-ess-r-newest))
          (:map inferior-ess-mode-map
                ;; Usually I bind C-z to `undo', but I don't really use `undo' in
@@ -2067,8 +2068,7 @@ showing them."
          )
 
   :custom
-  (inferior-R-program-name "c:/Program Files/R/R-3.6.3/bin/R.exe")
-  ;; (inferior-ess-r-program "R") ;this will run the newest file
+  (inferior-R-program-name "c:/Program Files/R/R-4.0.2/bin/R.exe")
   (ess-plain-first-buffername nil "Name first R process R:1")
   (ess-tab-complete-in-script t "TAB should complete.")
   (ess-style 'RStudio)
@@ -2290,24 +2290,28 @@ if there is displayed buffer that have shell it will use that window"
 (use-package ess-R-data-view
   ;; Use M-x ess-R-dv-ctable or ess-R-dv-pprint
   :after ess
-  :bind (:map my-personal-map
-              ("r" . ess-R-dev-ctable)
+  :bind (:map my-prog-map
+              ("t" . ess-R-dev-ctable)
               ("p" . ess-R-dev-pprint)))
 
 ;; Open buffer to test R code
-(defun test-R-buffer ()
-  "Create a new empty buffer with R-mode."
-  (interactive)
-  (let (($buf (generate-new-buffer "*r-test*"))
-        (test-mode2 (quote R-mode)))
-    (switch-to-buffer $buf)
-    (insert (format "## == Test %s == \n\n" "R script"))
-    (funcall test-mode2)
-    (setq buffer-offer-save t)
-    $buf
-    ))
-
-(global-set-key (kbd "<f12> r") 'test-R-buffer)
+(use-package test-r
+  :ensure nil
+  :bind (:map my-prog-map
+              ("b" . test-R-buffer))
+  :init
+  (defun test-R-buffer ()
+    "Create a new empty buffer with R-mode."
+    (interactive)
+    (let (($buf (generate-new-buffer "*r-test*"))
+          (test-mode2 (quote R-mode)))
+      (switch-to-buffer $buf)
+      (insert (format "## == Test %s == \n\n" "R script"))
+      (funcall test-mode2)
+      (setq buffer-offer-save t)
+      $buf
+      ))
+  )
 
 
 
