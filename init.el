@@ -1612,6 +1612,21 @@ Version 2017-09-01"
   :ensure t
   ;; Aggressive indent mode
   :hook ((emacs-lisp-mode ess-r-mode inferior-ess-r-mode org-src-mode) . aggressive-indent-mode)
+  :config
+  ;; problem with Error running timer https://github.com/Malabarba/aggressive-indent-mode/issues/137
+  (defun aggressive-indent--indent-if-changed (buffer)
+    "Indent any region that changed in BUFFER in the last command loop."
+    (if (not (buffer-live-p buffer))
+        (and aggressive-indent--idle-timer
+             (cancel-timer aggressive-indent--idle-timer))
+      (with-current-buffer buffer
+        (when (and aggressive-indent-mode aggressive-indent--changed-list)
+          (save-excursion
+            (save-selected-window
+              (aggressive-indent--while-no-input
+                (aggressive-indent--proccess-changed-list-and-indent))))
+          (when (timerp aggressive-indent--idle-timer)
+            (cancel-timer aggressive-indent--idle-timer))))))
   )
 
 
