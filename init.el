@@ -272,18 +272,28 @@
 ;;;; Things that use the catche folder
 (use-package recentf
   :defer 5
+  :init
+  (defun suppress-messages (func &rest args)
+    "Suppress message output from FUNC."
+    ;; Some packages are too noisy.
+    ;; https://superuser.com/questions/669701/emacs-disable-some-minibuffer-messages
+    (cl-flet ((silence (&rest args1) (ignore)))
+      (advice-add 'message :around #'silence)
+      (unwind-protect
+          (apply func args)
+        (advice-remove 'message #'silence))))
   :config
   (setq recentf-save-file (expand-file-name "recentf" my-emacs-cache)
         recentf-max-saved-items 'nil ;; Save the whole list
         recentf-max-menu-items 50
         ;; Cleanup list if idle for 10 secs
         recentf-auto-cleanup 10)
-  ;; save it every 60 minutes
-  (run-at-time t (* 60 60) 'recentf-save-list)
-  ;; ;;Suppress output "Wrote /home/ybka/.emacs.d/catche/recentf"
-  ;; (advice-add 'recentf-save-list :around #'suppress-messages)
-  ;; ;;Suppress output "Cleaning up the recentf list...done (0 removed)"
-  ;;(advice-add 'recentf-cleanup :around #'suppress-messages)
+  ;; save it every 10 minutes
+  (run-at-time t (* 10 60) 'recentf-save-list)
+  ;;Suppress output "Wrote /home/ybka/.emacs.d/catche/recentf"
+  (advice-add 'recentf-save-list :around #'suppress-messages)
+  ;;Suppress output "Cleaning up the recentf list...done (0 removed)"
+  (advice-add 'recentf-cleanup :around #'suppress-messages)
   (recentf-mode +1)
   )
 
@@ -1610,23 +1620,24 @@ Version 2017-09-01"
 
 (use-package aggressive-indent
   :ensure t
+  :defer t
   ;; Aggressive indent mode
-  :hook ((emacs-lisp-mode ess-r-mode inferior-ess-r-mode org-src-mode) . aggressive-indent-mode)
+  :hook ((emacs-lisp-mode ess-r-mode org-src-mode) . aggressive-indent-mode) ;;inferior-ess-r-mode 
   :config
-  ;; problem with Error running timer https://github.com/Malabarba/aggressive-indent-mode/issues/137
-  (defun aggressive-indent--indent-if-changed (buffer)
-    "Indent any region that changed in BUFFER in the last command loop."
-    (if (not (buffer-live-p buffer))
-        (and aggressive-indent--idle-timer
-             (cancel-timer aggressive-indent--idle-timer))
-      (with-current-buffer buffer
-        (when (and aggressive-indent-mode aggressive-indent--changed-list)
-          (save-excursion
-            (save-selected-window
-              (aggressive-indent--while-no-input
-                (aggressive-indent--proccess-changed-list-and-indent))))
-          (when (timerp aggressive-indent--idle-timer)
-            (cancel-timer aggressive-indent--idle-timer))))))
+  ;; ;; problem with Error running timer https://github.com/Malabarba/aggressive-indent-mode/issues/137
+  ;; (defun aggressive-indent--indent-if-changed (buffer)
+  ;;   "Indent any region that changed in BUFFER in the last command loop."
+  ;;   (if (not (buffer-live-p buffer))
+  ;;       (and aggressive-indent--idle-timer
+  ;;            (cancel-timer aggressive-indent--idle-timer))
+  ;;     (with-current-buffer buffer
+  ;;       (when (and aggressive-indent-mode aggressive-indent--changed-list)
+  ;;         (save-excursion
+  ;;           (save-selected-window
+  ;;             (aggressive-indent--while-no-input
+  ;;               (aggressive-indent--proccess-changed-list-and-indent))))
+  ;;         (when (timerp aggressive-indent--idle-timer)
+  ;;           (cancel-timer aggressive-indent--idle-timer))))))
   )
 
 
