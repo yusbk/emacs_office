@@ -1,4 +1,4 @@
-;;; init.el --- plain config  -*- lexical-binding: t; coding:utf-8; fill-column: 119 -*-
+;;; init.el --- straight config  -*- lexical-binding: t; coding:utf-8; fill-column: 119 -*-
 
 ;;; Commentary:
 ;; My personal config. Use `outshine-cycle-buffer' (<S-Tab> or (C-M i)) to navigate through sections, and `counsel-imenu' (C-c i)
@@ -25,20 +25,20 @@
                               (garbage-collect)) t)
 
 
-
-
-
-;;;;  package.el
-;;; so package-list-packages includes them
-(require 'package)
-(customize-set-variable 'package-archives
-                        `(,@package-archives
-                          ("melpa" . "https://melpa.org/packages/")
-                          ("org" . "https://orgmode.org/elpa/")
-                          ))
-(customize-set-variable 'package-enable-at-startup nil)
-(package-initialize)
-
+;;; Bootstrap `straight.el'
+;; Clone straight.el to ~/.emacs.d/straight/repos/straight.el
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 5))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
 
 ;; Bootstrap `use-package'
 (setq-default use-package-always-defer t ; Always defer load package to speed up startup time
@@ -46,23 +46,16 @@
               use-package-expand-minimally t  ; make the expanded code as minimal as possible
               use-package-enable-imenu-support t) ; Let imenu finds use-package definitions
 
-;;; use-package setup
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
 
-(eval-when-compile
-  (require 'use-package))
+;; Integration with use-package
+(straight-use-package 'use-package)
+(setq straight-use-package-by-default t) ;always-ensure
+(use-package git) ;;ensure to be able to install from git source
 
-(put 'use-package 'lisp-indent-function 1)
-
-;; use-package always ensure
-(require 'use-package-ensure)
-(setq use-package-always-ensure t)
 
 ;;; Garbage collector
 (use-package gcmh
-  :ensure t
+  :straight t
   :init
   (gcmh-mode 1))
 
@@ -104,11 +97,12 @@
 ;;; Symbolic link and folders
 (use-package my-personal-choices
   ;; add some general keys to my-personal-map
-  :ensure nil
+  :straight nil
   :bind (:map my-personal-map
               ("y" . my-init-file)
               ("0" . save-buffers-kill-emacs)
-              ("Q" . delete-frame) ;C-x 5 0
+              ("q" . delete-frame) ;C-x 5 0
+              ("<delete>" . kill-emacs)
               )
   :init
   (defun my-init-file ()
@@ -130,7 +124,8 @@
   (load custom-file :noerror))
 
 ;;; General setup
-(setq-default ;; Use setq-default to define global default
+;; Use setq-default to define global default
+(setq-default 
  ;; Don't show scratch message, and use fundamental-mode for *scratch*
  ;; Remove splash screen and the echo area message
  inhibit-startup-message t
@@ -190,17 +185,32 @@
  ad-redefinition-action 'accept
  )
 
+;;;; Windows paths
+(when (string-equal system-type "windows-nt") ())
+
+;;;; Encoding
+;; Encoding for all system
+;; https://stackoverflow.com/questions/2901541/which-coding-system-should-i-use-in-emacs/2903256#2903256
+;; Else use C-x RET f (set-buffer-file-coding-system) then save the file
+;; with selected encoding
+(setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)
+(set-language-environment 'utf-8)
+(set-keyboard-coding-system 'utf-8-mac) ; For old Carbon emacs on OS X only
+(setq locale-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-selection-coding-system
+ (if (eq system-type 'windows-nt)
+     'utf-16-le  ;; https://rufflewind.com/2014-07-20/pasting-unicode-in-emacs-on-windows
+   'utf-8))
+(prefer-coding-system 'utf-8)
 
 ;;; Misc
-;; Misc
 (set-frame-name "Emacs the Great")
+;; replaced active region by typing txt or DEL
 (delete-selection-mode 1)
 ;; enable y/n answers
 (fset 'yes-or-no-p 'y-or-n-p)
-;; Set paste system
-;; (set-clipboard-coding-system 'utf-16le-dos)
-;; Set paste error under linux
-(set-selection-coding-system 'utf-8)
 ;; Allow pasting selection outside of Emacs
 (setq x-select-enable-clipboard t)
 ;; Don't blink
@@ -224,8 +234,7 @@
 
 (use-package beacon
   ;; Highlight the cursor whenever it scrolls
-  :ensure t
-  :defer 5
+  :straight t
   :bind (("C-<f12>" . beacon-blink)) ;; useful when multiple windows
   :config
   (setq beacon-size 10)
@@ -235,28 +244,35 @@
 (unbind-key "C-x C-z")
 ;; if frame freeze then use xkill -frame $emacs
 
+;; (require 'cl) ;Old Common Lisp library eg. defstruct, incf etc
+(require 'cl-lib) ;;include Common Lisp compatibility eg. cl-defstruct, cl-incf etc
+(use-package f :demand t) ;; files
+(use-package dash :demand t) ;; lists
+(use-package ht :demand t) ;; hash-tables
+(use-package s :demand t) ;; strings
+(use-package a :demand t) ;; association lists
+(use-package anaphora :demand t) ;; anaphora for implicit temp variable of Emacs Lisp expressions
+(use-package hydra)
+
 (use-package which-key
-  :defer 3
   :custom
-  (which-key-show-early-on-C-h t "Allow C-h to trigger which-key b4 it's done automatically")
-  (which-key-idle-delay 10000)
+  ;; (which-key-show-early-on-C-h t "Allow C-h to trigger which-key b4 it's done automatically")
+  (which-key-idle-delay 1.0)
   (which-key-idle-secondary-delay 0.05)
+  (which-key-popup-type 'minibuffer)
   :config
   ;; (setq which-key-idle-delay 1.0)
   (which-key-mode)
 
   ;; Rename for resize-buffer menu
   (which-key-add-key-based-replacements
-    "<f12> v" "resize buffer")
+    "C-c w" "eyebrowse")
   )
 
 (use-package whole-line-or-region
   ;; If no region is active, C-w and M-w will act on current line
-  :defer 5
-  ;; Right click to paste: I don't use the popup
-  ;; :bind ("<mouse-3>" . whole-line-or-region-
   :bind (:map whole-line-or-region-local-mode-map
-              ("C-w" . kill-region-or-backward-word)) ;; Reserve for backward-kill-word
+              ("<M-backspace>" . kill-region-or-backward-word)) ;; Reserve for backward-kill-word
   :init
   (defun kill-region-or-backward-word ()
     "Kill selected region if region is active. Otherwise kill a backward word."
@@ -307,15 +323,16 @@
   ;; For Windows
   (global-set-key (kbd "<C-wheel-up>") 'text-scale-decrease)
   (global-set-key (kbd "<C-wheel-down>") 'text-scale-increase)
-  :ensure t
+  :straight t
   :bind (("C--" . default-text-scale-decrease)
          ("C-+" . default-text-scale-increase))
   :config
   (default-text-scale-mode))
 
 
-;;; Commenting
+;;; General for programming
 (defun comment-eclipse ()
+  "For commenting code."
   (interactive)
   (let ((start (line-beginning-position))
         (end (line-end-position)))
@@ -331,8 +348,6 @@
     (comment-or-uncomment-region start end)))
 
 (global-set-key (kbd "M-'") 'comment-eclipse)
-
-
 
 (use-package crux
   ;; A handful of useful functions
@@ -353,7 +368,8 @@
                ;; ("t" . crux-transpose-windows)
                )
          (:map my-personal-map
-               ("<return>" . crux-cleanup-buffer-or-region))
+               ("<return>" . crux-cleanup-buffer-or-region)
+               ("K" . crux-kill-other-buffers))
          )
   :init
   (global-set-key [remap move-beginning-of-line] #'crux-move-beginning-of-line)
@@ -365,18 +381,25 @@
   (add-to-list 'crux-indent-sensitive-modes 'markdown-mode)
   )
 
+(use-package page-scrolling
+  ;; http://pragmaticemacs.com/emacs/scrolling-and-moving-by-line/
+  :straight nil
+  :init
+  ;; preserve cursor position when scrolling
+  (setq scroll-preserve-screen-position 1)
+  ;; scrool windows up/down by 3 lines
+  (global-set-key (kbd "C-<prior>") (kbd "C-u 3 M-v"))
+  (global-set-key (kbd "C-<next>") (kbd "C-u 3 C-v"))
+  )
 
 
 (use-package simple
   ;; Improvements over simple editing commands
-  :ensure nil
+  :straight nil
   :defer 5
   :hook ((prog-mode) . auto-fill-mode)
   ;; resize buffer accordingly
   :bind
-  ;; binding changed named with which-key
-  ("<f12> v" . (lambda () (interactive) (progn (visual-line-mode)
-                                          (follow-mode))))
   ;; M-backspace to backward-delete-word
   ;; C-S-backspace is used by sp-kill-whole-line
   ("M-S-<backspace>" . backward-kill-sentence)
@@ -517,14 +540,14 @@ Version 2019-11-24"
 (use-package iedit
   ;;to combine iedit with mc can use idedit-switch-to-mc-mode
   ;;use C-; to start and end iedit
-  :ensure t
-  :bind ("C-;" . iedit-mode)
+  :straight t
+  :bind ("C-:" . iedit-mode)
   )
 
 
 (use-package multiple-cursors
   ;; Read https://github.com/magnars/multiple-cursors.el for common use cases
-  :ensure t
+  :straight t
   :defer 10
   :commands (mc/mark-next-like-this)
   :bind (:map my-assist-map
@@ -579,7 +602,7 @@ Version 2019-11-24"
 
 
 (use-package undo-tree
-  :ensure t
+  :straight t
   :diminish undo-tree-mode
   :bind ("C-x u" . undo-tree-visualize)
   :config
@@ -647,11 +670,11 @@ Version 2019-11-24"
 (use-package counsel
   ;; specifying counsel will bring ivy and swiper as dependencies
   :demand t
-  :ensure ivy-hydra
-  :ensure ivy-rich
-  :ensure counsel-projectile
-  :ensure ivy-posframe
-  :ensure smex
+  :straight ivy-hydra ;activated with C-o in ivy-minor-mode
+  :straight ivy-rich
+  :straight counsel-projectile
+  :straight ivy-posframe
+  :straight smex
   :bind (
          :map my-search-map
          ("s" . swiper)
@@ -777,7 +800,7 @@ output file. %i path(s) are relative, while %o is absolute.")
 ;;need to specify editor in git terminal with
 ;;git config core.editor '"c:/path_to/bin/emacsclient.exe"'
 (use-package with-editor
-  :ensure t
+  :straight t
   :config
   (add-hook 'shell-mode-hook  'with-editor-export-editor)
   (add-hook 'term-exec-hook   'with-editor-export-editor)
@@ -786,16 +809,16 @@ output file. %i path(s) are relative, while %o is absolute.")
 
 (use-package magit
   :defer 10
-  ;;:ensure gitignore-templates
-  :ensure diff-hl
-  :ensure git-gutter
-  :ensure ov
-  :ensure smerge-mode
-  :ensure git-timemachine
+  ;;:straight gitignore-templates
+  :straight diff-hl
+  :straight git-gutter
+  :straight ov
+  :straight smerge-mode
+  :straight git-timemachine
   ;;display flycheck errors only on added/modified lines
-  :ensure magit-todos
-  :ensure ediff
-  :ensure magit-diff-flycheck
+  :straight magit-todos
+  :straight ediff
+  :straight magit-diff-flycheck
   ;; use M-x v for vc-prefix-map
   :bind (:map vc-prefix-map
               ("s" . 'git-gutter:stage-hunk)
@@ -928,7 +951,7 @@ command was called, go to its unstaged changes section."
 
 
 (use-package git-gutter
-  :ensure t
+  :straight t
   ;; :when window-system
   :defer t
   :bind (("C-x P" . git-gutter:popup-hunk)
@@ -941,7 +964,7 @@ command was called, go to its unstaged changes section."
   (add-hook 'text-mode-hook #'git-gutter-mode)
   :config
   (use-package git-gutter-fringe
-    :ensure t
+    :straight t
     :init
     (require 'git-gutter-fringe)
     (when (fboundp 'define-fringe-bitmap)
@@ -964,7 +987,7 @@ command was called, go to its unstaged changes section."
 (use-package smerge-mode
   ;; For comparing conflict better than ediff with Magit
   ;; https://github.com/alphapapa/unpackaged.el#smerge-mode
-  :ensure t
+  :straight t
   :after hydra
   :bind (:map my-assist-map
               ("e" . my-smerge-hydra/body))
@@ -1010,15 +1033,17 @@ _p_rev       _u_pper              _=_: upper/lower       _r_esolve
 ;; In windows it's important to put Git/usr/bin to path to use diff.exe file
 (use-package ediff
   ;; source https://oremacs.com/2015/01/17/setting-up-ediff/
-  :ensure nil
+  :straight nil
   :bind (:map my-assist-map
-              ("E" . ediff))
+              ("E" . ediff)
+              ("B" . diff-buffer-with-file) ;view changes in the buffer to file
+              ("C" . ediff-current-file) ;for interactive ediff buffer and file
+              )
   :custom
   (ediff-diff-options "-w" "ignore whitespace")
   ;; (ediff-window-setup-function 'ediff-setup-windows-plain "Don't use separate frame for control panel")
   (ediff-split-window-function 'split-window-horizontally)
   :config
-  
   ;; Bagi key bindings
   (defun ora-ediff-hook ()
     (ediff-setup-keymap)
@@ -1034,8 +1059,76 @@ _p_rev       _u_pper              _=_: upper/lower       _r_esolve
 
 
 ;;; Window and Buffer management
+(use-package resize-window
+  :straight nil
+  :init
+  (defun win-resize-top-or-bot ()
+    "Figure out if the current window is on top, bottom or in the
+  middle"
+    (let* ((win-edges (window-edges))
+           (this-window-y-min (nth 1 win-edges))
+           (this-window-y-max (nth 3 win-edges))
+           (fr-height (frame-height)))
+      (cond
+       ((eq 0 this-window-y-min) "top")
+       ((eq (- fr-height 1) this-window-y-max) "bot")
+       (t "mid"))))
+
+  (defun win-resize-left-or-right ()
+    "Figure out if the current window is to the left, right or in the
+  middle"
+    (let* ((win-edges (window-edges))
+           (this-window-x-min (nth 0 win-edges))
+           (this-window-x-max (nth 2 win-edges))
+           (fr-width (frame-width)))
+      (cond
+       ((eq 0 this-window-x-min) "left")
+       ((eq (+ fr-width 4) this-window-x-max) "right")
+       (t "mid"))))
+
+  (defun win-resize-enlarge-horiz ()
+    (interactive)
+    (cond
+     ((equal "top" (win-resize-top-or-bot)) (enlarge-window -1))
+     ((equal "bot" (win-resize-top-or-bot)) (enlarge-window 1))
+     ((equal "mid" (win-resize-top-or-bot)) (enlarge-window -1))
+     (t (message "nil"))))
+
+  (defun win-resize-minimize-horiz ()
+    (interactive)
+    (cond
+     ((equal "top" (win-resize-top-or-bot)) (enlarge-window 1))
+     ((equal "bot" (win-resize-top-or-bot)) (enlarge-window -1))
+     ((equal "mid" (win-resize-top-or-bot)) (enlarge-window 1))
+     (t (message "nil"))))
+
+  (defun win-resize-enlarge-vert ()
+    (interactive)
+    (cond
+     ((equal "left" (win-resize-left-or-right)) (enlarge-window-horizontally -1))
+     ((equal "right" (win-resize-left-or-right)) (enlarge-window-horizontally 1))
+     ((equal "mid" (win-resize-left-or-right)) (enlarge-window-horizontally -1))))
+
+  (defun win-resize-minimize-vert ()
+    (interactive)
+    (cond
+     ((equal "left" (win-resize-left-or-right)) (enlarge-window-horizontally 1))
+     ((equal "right" (win-resize-left-or-right)) (enlarge-window-horizontally -1))
+     ((equal "mid" (win-resize-left-or-right)) (enlarge-window-horizontally 1))))
+
+  (global-set-key [C-S-down] 'win-resize-minimize-vert)
+  (global-set-key [C-S-up] 'win-resize-enlarge-vert)
+  (global-set-key [C-S-left] 'win-resize-minimize-horiz)
+  (global-set-key [C-S-right] 'win-resize-enlarge-horiz)
+  (global-set-key [C-S-up] 'win-resize-enlarge-horiz)
+  (global-set-key [C-S-down] 'win-resize-minimize-horiz)
+  (global-set-key [C-S-left] 'win-resize-enlarge-vert)
+  (global-set-key [C-S-right] 'win-resize-minimize-vert)
+  )
+
+
 (use-package windmove
-  :ensure nil
+  :straight nil
   :bind (
          ("s-j" . windmove-down)
          ("s-k" . windmove-up)
@@ -1048,11 +1141,9 @@ _p_rev       _u_pper              _=_: upper/lower       _r_esolve
          )
   )
 
-
-
 (use-package window
   ;; Handier movement over default window.el
-  :ensure nil
+  :straight nil
   :bind (
          ("C-x 2"             . split-window-below-and-move-there)
          ("C-x 3"             . split-window-right-and-move-there)
@@ -1108,7 +1199,7 @@ horizontal mode."
 
 
 (use-package winum
-  :ensure t
+  :straight t
   :defer 1
   :init
   (setq winum-keymap
@@ -1129,8 +1220,7 @@ horizontal mode."
 
 
 (use-package ace-window
-  :disabled
-  :defer 3
+  ;; make backgound gray for different buffer with aw-background
   :bind ([S-return] . ace-window)
   :custom-face (aw-leading-char-face ((t (:inherit ace-jump-face-foreground :height 3.0))))
   :config
@@ -1157,19 +1247,17 @@ horizontal mode."
 
 (use-package golden-ratio
   ;; Resize windows with ratio https://github.com/roman/golden-ratio.el
-  :ensure t
-  :defer 5
+  :straight t
   :bind* (:map my-personal-map
-               ("V" . golden-ratio-mode))
+               ("v" . golden-ratio-mode))
   :diminish golden-ratio-mode
   :init
-  (golden-ratio-mode 1)
+  ;; (golden-ratio-mode 1)
   (setq golden-ratio-auto-scale t))
 
 
 (use-package transpose-frame
-  :ensure t
-  :defer 4
+  :straight t
   :commands (transpose-frame)
   :init
   (use-package crux)
@@ -1229,14 +1317,14 @@ With ARG, swap them instead."
 ;;; Navigation
 ;;;; Register
 (use-package register
-  :ensure nil
+  :straight nil
   :bind* (:map my-assist-map
                ("<SPC>" . point-to-register)
                ("j" . jump-to-register)))
 
 ;;;; Bookmark
 (use-package bookmark
-  :ensure t
+  :straight t
   :init
   (setq bookmark-default-file (concat my-emacs-cache "bookmarks") ;bookmarks dir
         bookmark-save-flag 1) ;auto save when chnage else use "t" to autosave when emacs quits
@@ -1348,14 +1436,25 @@ Version 2017-09-01"
 
 (use-package projectile
   :defer 2
-  :ensure ripgrep ;; required by projectile-ripgrep
-  :ensure which-key ;; to rename C-c p
+  :straight ripgrep ;; required by projectile-ripgrep
+  :straight which-key ;; to rename C-c p
   :bind-keymap
   ("C-c p" . projectile-command-map)
   ;; :bind* (("C-c p f" . 'projectile-find-file))
   :bind (:map projectile-command-map
               ("f" . projectile-find-file)
               ("p" . counsel-switch-project))
+  :init
+  ;; catch projects
+  (setq projectile-enable-caching t)
+  ;; for ignoring by file .projectile
+  (setq projectile-indexing-method 'native)
+  ;; reorder
+  (setq projectile-project-root-files #'( ".projectile"))
+  (setq projectile-project-root-files-functions  #'(projectile-root-top-down
+                                                    projectile-root-top-down-recurring
+                                                    projectile-root-bottom-up
+                                                    projectile-root-local))
   :config
   (which-key-add-key-based-replacements
     "C-c p" "projectile-map"
@@ -1372,9 +1471,6 @@ Version 2017-09-01"
 
   ;; Don't consider my home dir as a project
   (add-to-list 'projectile-ignored-projects `,(concat (getenv "HOME") "/"))
-
-  ;; catch projects
-  (setq projectile-enable-caching t)
 
   
   ;; Different than projectile-switch-project coz this works globally
@@ -1395,7 +1491,7 @@ Version 2017-09-01"
 
 ;;integrerer ivy i projectile
 (use-package counsel-projectile
-  :ensure t
+  :straight t
   :after projectile
   :defer 3
   :config
@@ -1439,7 +1535,7 @@ Version 2017-09-01"
 ;;;; General settings: prog-mode, whitespaces, symbol-prettifying, highlighting
 (use-package prog-mode
   ;; Generic major mode for programming
-  :ensure rainbow-delimiters
+  :straight rainbow-delimiters
   :defer 5
   :hook (org-mode . prettify-symbols-mode)
   :hook (prog-mode . rainbow-delimiters-mode) ; Prettify parenthesis
@@ -1475,7 +1571,7 @@ Version 2017-09-01"
 ;; And this tutorial: https://ebzzry.io/en/emacs-pairs/
 ;; Example: exp1 (exp2 (exp3)) exp4
 (use-package smartparens
-  :ensure t
+  :straight t
   :defer 2
   :bind (([f8] . hydra-smartparens/body)
          :map my-assist-map
@@ -1487,10 +1583,10 @@ Version 2017-09-01"
          ("M-{"           . sp-wrap-curly)
          ("M-<backspace>" . sp-backward-unwrap-sexp) ;unwrap outside exp2 when in exp3
          ("M-<del>"       . sp-unwrap-sexp) ;unwrap exp3 when in exp3
-         ("C-S-<right>"     . sp-forward-slurp-sexp) ;include exp4 when in exp3
-         ("C-S-<left>"      . sp-backward-slurp-sexp) ;include exp1 when in exp2
-         ("C-M-<right>"   . sp-forward-barf-sexp) ;remove exp4 from ()
-         ("C-M-<left>"    . sp-backward-barf-sexp) ;remove exp2 from ()
+         ;; ("C-S-<right>"     . sp-forward-slurp-sexp) ;include exp4 when in exp3
+         ;; ("C-S-<left>"      . sp-backward-slurp-sexp) ;include exp1 when in exp2
+         ;; ("C-M-<right>"   . sp-forward-barf-sexp) ;remove exp4 from ()
+         ;; ("C-M-<left>"    . sp-backward-barf-sexp) ;remove exp2 from ()
          ("C-M-a"         . sp-beginning-of-sexp)
          ("C-M-z"         . sp-end-of-sexp)
          ("C-M-k"         . sp-kill-sexp)
@@ -1585,7 +1681,7 @@ Version 2017-09-01"
 
 ;; gives spaces automatically
 (use-package electric-operator
-  :ensure t
+  :straight t
   :hook ((ess-r-mode python-mode) . electric-operator-mode)
   :config
   ;; edit rules for ESS mode
@@ -1601,7 +1697,7 @@ Version 2017-09-01"
   )
 
 (use-package csv-mode
-  :ensure t
+  :straight t
   :mode "\\.csv$"
   :init
   (setq csv-separators '(";"))
@@ -1615,11 +1711,17 @@ Version 2017-09-01"
               ("x v" . find-variable)
               ("x l" . find-library))
   :hook
-  (find-function-after . reposition-window))
+  (find-function-after . reposition-window)
+  :config
+  
+  ;; Rename for find-function
+  (which-key-add-key-based-replacements
+    "C-s x" "find-xxx")
+  )
 
 
 (use-package aggressive-indent
-  :ensure t
+  :straight t
   :defer t
   ;; Aggressive indent mode
   :hook ((emacs-lisp-mode ess-r-mode org-src-mode) . aggressive-indent-mode) ;;inferior-ess-r-mode 
@@ -1644,7 +1746,6 @@ Version 2017-09-01"
 
 ;;;; Auto-completion
 (use-package auto-complete
-  :defer 3
   :hook (inferior-ess-r-mode . auto-complete-mode)
   :bind (:map ac-complete-mode-map
               ("C-n" . ac-next)
@@ -1663,9 +1764,79 @@ Version 2017-09-01"
   )
 
 
+(use-package company
+  :straight company-quickhelp ; Show short documentation at point
+  :straight company-shell
+  ;; :bind* ("C-i" . company-complete) ;activate globally doesn't work in Swiper
+  :bind (
+         :map company-active-map
+         ("C-c ?" . company-quickhelp-manual-begin)
+         ;; Deactivate default M-n and M-h for convinence in inferior-R buffer
+         ("C-n" . company-select-next)
+         ("C-p" . company-select-previous)
+         ("C-d" . company-show-doc-buffer)
+         ("<tab>" . company-complete)
+         ("C-i" . company-complete-common)
+         :map my-search-map
+         ("c" . company-mode)
+         ("<tab>" . company-complete-selection)
+         )
+  :custom
+  (company--show-numbers nil "Show number not optimal when writing R code")
+  (company-tooltip-flip-when-above t "Invert navigation when at the bottom windows")
+  (company-tooltip-align-annotations t "Align")
+  (company-tooltip-limit 6 "List to show")
+  (company-idle-delay .2 "Delay before autocomplete popup")
+  (company-minimum-prefix-length 4 "Number of prefix before popup")
+  (company-abort-manual-when-too-short t "No autocomplete if below minimum prefix")
+  :config
+  (global-company-mode t)
+
+  ;; Directly press [1..9] to insert candidates
+  ;; See http://oremacs.com/2017/12/27/company-numbers/
+  (defun ora-company-number ()
+    "Forward to `company-complete-number'.
+Unless the number is potentially part of the candidate.
+In that case, insert the number."
+    (interactive)
+    (let* ((k (this-command-keys))
+           (re (concat "^" company-prefix k)))
+      (if (or (cl-find-if (lambda (s) (string-match re s))
+                          company-candidates)
+              (> (string-to-number k)
+                 (length company-candidates)))
+          (self-insert-command 1)
+        (company-complete-number
+         (if (equal k "0")
+             10
+           (string-to-number k))))))
+
+  (let ((map company-active-map))
+    (mapc (lambda (x) (define-key map (format "%d" x) 'ora-company-number))
+          (number-sequence 0 9))
+    (define-key map " " (lambda ()
+                          (interactive)
+                          (company-abort)
+                          (self-insert-command 1)))
+    (define-key map (kbd "<return>") nil))
+
+  ;; company-shell
+  (add-to-list 'company-backends 'company-shell)
+
+  ;; aktifkan di org-mode selepas pastikan company-capf di company-backends
+  ;; https://github.com/company-mode/company-mode/issues/50
+  (defun add-pcomplete-to-capf ()
+    (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
+  (add-hook 'org-mode-hook #'add-pcomplete-to-capf)
+
+
+  )
+
+
+
 ;;;; Heuristic text completion: hippie expand + dabbrev
 (use-package hippie-exp
-  :ensure nil
+  :straight nil
   :defer 3
   :bind (("M-/"   . hippie-expand-no-case-fold)
          ("C-M-/" . dabbrev-completion)
@@ -1699,7 +1870,7 @@ Version 2017-09-01"
 ;;;; Eshell
 ;; Emacs command shell
 (use-package eshell
-  :ensure nil
+  :straight nil
   :defines eshell-prompt-function
   :functions eshell/alias
   :bind (:map my-personal-map
@@ -1807,7 +1978,7 @@ Version 2017-09-01"
     :defines eshell-highlight-prompt
     :commands (epe-theme-lambda epe-theme-dakrone epe-theme-pipeline)
     :init (setq eshell-highlight-prompt nil
-                eshell-prompt-function 'epe-theme-lambda))
+                eshell-prompt-function 'epe-theme-dakrone))
 
   (use-package esh-autosuggest
     ;; Fish-like history autosuggestions https://github.com/dieggsy/esh-autosuggest
@@ -1836,14 +2007,14 @@ Version 2017-09-01"
 
 (use-package eshell-git-prompt
   ;; show git status and branch
-  :ensure t
+  :straight t
   :config
   (eshell-git-prompt-use-theme 'powerline)
   )
 
 ;; Shell Pop
 (use-package shell-pop
-  :ensure t
+  :straight t
   :defer 2
   :bind (:map my-personal-map
               ("x" . shell-pop))
@@ -1867,7 +2038,7 @@ Version 2017-09-01"
   ;; Hide/show header for easy navigation to give a feel of Org Mode
   ;; outside Org major-mode. Use <C-M i> or <S-Tab>
   ;; use set-selective-display (C-x $) for ad-hock prefix argument
-  :ensure t
+  :straight t
   :defer 3
   :bind (:map outshine-mode-map
               ("<S-<backtab>" . outshine-cycle-buffer)
@@ -1881,7 +2052,7 @@ Version 2017-09-01"
   :bind (("C-c TAB" . hs-toggle-hiding)
          ;; ("C-c h" . hs-toggle-hiding)
          ("M-+" . hs-show-all)
-         :map my-assist-map
+         :map my-prog-map
          ("-" . hs-toggle-hiding)
          ("+" . hs-show-all)
          )
@@ -1929,7 +2100,7 @@ showing them."
 
 ;;;; File explorer
 (use-package neotree
-  :ensure t
+  :straight t
   :defer 3
   :bind ("<f4>" . neotree-toggle)
   :init
@@ -1942,7 +2113,7 @@ showing them."
     )
   :config
   (progn
-    (setq neo-theme 'ascii) ; 'classic, 'nerd, 'ascii, 'arrow
+    (setq neo-theme 'classic) ; 'classic, 'nerd, 'ascii, 'arrow
 
     (setq neo-vc-integration '(face char))
 
@@ -2024,7 +2195,7 @@ showing them."
 (use-package ztree
   ;;Had diff mode with M-x ztree-diff or ordinary tree with ztree-dir
   ;; https://github.com/fourier/ztree
-  :ensure t
+  :straight t
   :bind (
          :map my-personal-map
          ("z" . ztree-dir)
@@ -2042,7 +2213,7 @@ showing them."
 ;; Tooltips
 ;; C-c C-d C-e ess-describe-object-at-point
 (use-package ess-mode
-  :ensure ess
+  :straight ess
   :bind ((:map my-prog-map
                ("r" . run-ess-r-newest))
          (:map inferior-ess-mode-map
@@ -2060,8 +2231,9 @@ showing them."
   ;; (setq company-global-modes '(not inferior-ess-mode))
   )
 
+;;;; R
 (use-package ess-r-mode
-  :ensure ess
+  :straight ess
   ;; :mode ("\\.r[R]\\'" . ess-r-mode)
   ;; :commands (R
   ;;            R-mode
@@ -2322,7 +2494,7 @@ if there is displayed buffer that have shell it will use that window"
 
 ;; Open buffer to test R code
 (use-package test-r
-  :ensure nil
+  :straight nil
   :bind (:map my-prog-map
               ("b" . test-R-buffer))
   :init
@@ -2339,13 +2511,53 @@ if there is displayed buffer that have shell it will use that window"
       ))
   )
 
+;;;; Stata
+;; specify PATH guide https://emacs.stackexchange.com/questions/27326/gui-emacs-sets-the-exec-path-only-from-windows-environment-variable-but-not-from
+(use-package ess-stata-mode
+  ;; This has been taken out from ESS https://github.com/emacs-ess/ESS/issues/1033
+  :disabled
+  :straight ess
+  :mode (("\\.do" . stata-mode)
+         ("\\.ado" . stata-mode))
+  :init
+  ;; (add-to-list 'exec-path "C:/Program Files/Stata16")
+  ;; (setenv "PATH" (mapconcat #'identity exec-path path-separator))
+  (if (eq system-type 'windows-nt)
+      (progn
+        (add-to-list 'exec-path "C:/Program Files/Stata16")
+        (setenv "PATH" (mapconcat #'identity exec-path path-separator))
+        ))
+  )
 
-
+;; Ado-mode consiste script (send2stata.exe) and template dir which is not in lisp that need
+;; to be specified. Therefore using straight will give errors since straight does
+;; not include those directories. Else clone repos from github.
+;; Open Stata and M-RET to run code ie. send2stata
+(use-package ado-mode
+  ;; https://github.com/louabill/ado-mode
+  ;; :straight (ado-mode :type git :host github :repo "louabill/ado-mode")
+  :straight nil
+  :load-path "C:/Users/ybka/AppData/Roaming/lisp/ado-mode-1.16.1.1/lisp"
+  :mode (("\\.do" . ado-mode)
+         ("\\.ado" . ado-mode))
+  ;; :hook (ado-mode . company-mode)
+  :hook (ado-mode . auto-complete-mode)
+  :hook (ado-mode . rainbow-delimiters-mode)
+  :hook (ado-mode . smartparens-mode)
+  :hook (ado-mode . smartparens-strict-mode)
+  :custom
+  ;; (ado-script-dir "C:/Users/ybka/AppData/Roaming/lisp/ado-mode-1.16.1.1/scripts")
+  (ado-mode-home "C:/Users/ybka/AppData/Roaming/lisp/ado-mode-1.16.1.1/")
+  (ado-script-dir
+   "C:/Users/ybka/AppData/Roaming/lisp/ado-mode-1.16.1.1/scripts")
+  (ado-site-template-dir
+   "C:/Users/ybka/AppData/Roaming/lisp/ado-mode-1.16.1.1/templates/")
+  )
 
 ;;; Markdown
 ;; Code highlighting via polymode
 (use-package markdown-mode
-  :ensure t
+  :straight t
   :mode
   (("README\\.md\\'" . gfm-mode)
    ("\\.md\\'" . markdown-mode)
@@ -2355,10 +2567,10 @@ if there is displayed buffer that have shell it will use that window"
   )
 
 (use-package polymode
-  :ensure markdown-mode
-  :ensure poly-R
-  :ensure poly-noweb
-  :ensure fold-this
+  :straight markdown-mode
+  :straight poly-R
+  :straight poly-noweb
+  :straight fold-this
   :config
   ;; R/tex polymodes
   (add-to-list 'auto-mode-alist '("\\.Rnw" . poly-noweb+r-mode))
@@ -2369,8 +2581,8 @@ if there is displayed buffer that have shell it will use that window"
 
 
 (use-package poly-markdown
-  :ensure polymode
-  :ensure markdown-mode
+  :straight polymode
+  :straight markdown-mode
   :defer t
   :config
   ;; Wrap lines at column limit, but don't put hard returns in
@@ -2381,9 +2593,9 @@ if there is displayed buffer that have shell it will use that window"
 
 ;; poly-R
 (use-package poly-R
-  :ensure polymode
-  :ensure poly-markdown
-  :ensure poly-noweb
+  :straight polymode
+  :straight poly-markdown
+  :straight poly-noweb
   :defer t
   :bind(:map polymode-map
              ("i" . rmd-insert-r-chunk))
@@ -2418,9 +2630,834 @@ if there is displayed buffer that have shell it will use that window"
 
 ;; Add yaml to markdown an .yml files
 (use-package yaml-mode
-  :ensure t
+  :straight t
   :mode (("\\.yml\\'" . yaml-mode)))
 
+
+
+;;; Latex
+;;pdf-tools is better but difficult to get it in Windows
+(use-package doc-view
+  :defer t
+  :custom
+  ;; Use MikTeX's utilities for PDF conversion and searching
+  (doc-view-ghostscript-program "mgs.exe")
+  (doc-view-pdf->png-converter-function 'doc-view-pdf->png-converter-ghostscript)
+  (doc-view-pdftotext-program "miktex-pdftotext.exe")
+  ;; MikTeX's utilities also for vieweing DVI files
+  (doc-view-dvipdfm-program "dvipdfm.exe")
+  ;; I install Libreoffice using Scoop as a portable, standalone
+  ;; executable. This is the location of the utility within there.
+  (doc-view-odf->pdf-converter-program "~/scoop/apps/libreoffice-stable/current/App/libreoffice/program/soffice.exe")
+  (doc-view-odf->pdf-converter-function 'doc-view-odf->pdf-converter-soffice)
+  )
+
+;;; Org
+(use-package org
+  ;; Org mode is a great thing. I use it for writing academic papers,
+  ;; managing my schedule, managing my references and notes, writing
+  ;; presentations, writing lecture slides, and pretty much anything
+  ;; else.
+  :straight org-plus-contrib
+  :bind
+  (("C-c l" . org-store-link)
+   ("C-'" . org-cycle-agenda-files) ; quickly access agenda files
+   :map org-mode-map
+   ("C-a" . org-beginning-of-line)
+   ("C-e" . org-end-of-line)
+   ;; Bind M-p and M-n to navigate heading more easily (these are bound to
+   ;; C-c C-p/n by default):
+   ("M-p" . my/org-previous-visible-heading)
+   ("M-n" . my/org-next-visible-heading)
+   ;; C-c C-t is bound to `org-todo' by default, but I want it
+   ;; bound to C-c t as well:
+   ("C-c t" . org-todo)
+   ;; Show hidden link
+   ("M-L" . my/org-toggle-link-display)
+   )
+  :hook
+  (org-mode . my/setup-org-mode)
+  :custom
+  (org-blank-before-new-entry nil)
+  (org-cycle-separator-lines 0)
+  (org-pretty-entities t "UTF8 all the things!")
+  (org-support-shift-select t "Holding shift and moving point should select things.")
+  (org-fontify-quote-and-verse-blocks t "Provide a special face for quote and verse blocks.")
+  (org-M-RET-may-split-line nil "M-RET may never split a line.")
+  (org-enforce-todo-dependencies t "Can't finish parent before children.")
+  (org-enforce-todo-checkbox-dependencies t "Can't finish parent before children.")
+  (org-hide-emphasis-markers t "Make words italic or bold, hide / and *.")
+  (org-catch-invisible-edits 'show-and-error "Don't let me edit things I can't see.")
+  (org-special-ctrl-a/e t "Make C-a and C-e work more like how I want:.")
+  (org-preview-latex-default-process 'imagemagick "Let org's preview mechanism use imagemagick instead of dvipng.")
+  ;; Let imenu go deeper into menu structure
+  (org-imenu-depth 6)
+  (org-image-actual-width '(300))
+  (org-blank-before-new-entry '((heading . nil)
+                                (plain-list-item . nil)))
+  ;; For whatever reason, I have to explicitely tell org how to open pdf
+  ;; links.  I use pdf-tools.  If pdf-tools isn't installed, it will use
+  ;; doc-view (shipped with Emacs) instead.
+  (org-file-apps
+   '((auto-mode . emacs)
+     ("\\.mm\\'" . default)
+     ("\\.x?html?\\'" . default)
+     ("\\.pdf\\'" . emacs)))
+  (org-highlight-latex-and-related '(latex entities) "set up fontlocking for latex")
+  (org-startup-with-inline-images t "Show inline images.")
+  (org-log-done 'time)
+  (org-goto-interface 'outline-path-completion)
+  (org-ellipsis "..►") ;; symbol for hiding content 
+  ;; tags within start-endgroup will allow only one of those in a file
+  ;; C-c C-q for setting tags
+  (org-tag-persistent-alist '(("annent" . ?a)
+                              ("prog" . ?p)
+                              ("fhi" . ?f)
+                              (:startgroup . nil)
+                              ("@work" . ?w)
+                              ("@home" . ?h)
+                              (:endgroup . nil)))
+
+  ;; I keep my recipes in an org file and tag them based on what kind of
+  ;; dish they are.  The level one headings are names, and each gets two
+  ;; level two headings --- ingredients and directions.  To easily search via
+  ;; tag, I can restrict org-agenda to that buffer using < then hit m to
+  ;; match based on a tag.
+  (org-tags-exclude-from-inheritance
+   '("BREAKFAST" "DINNER" "DESSERT" "SIDE" "CHICKEN" "SEAFOOD"
+     "BEEF" "PASTA" "SOUP" "SNACK" "DRINK" "LAMB" "VEGETARIAN"))
+  ;; Org-refile lets me quickly move around headings in org files.  It
+  ;; plays nicely with org-capture, which I use to turn emails into TODOs
+  ;; easily (among other things, of course)
+  (org-outline-path-complete-in-steps nil)
+  (org-refile-allow-creating-parent-nodes 'confirm)
+  (org-refile-use-outline-path 'file)
+  (org-refile-targets '((org-agenda-files . (:maxlevel . 6)))"Up to 6 level deep headlines")
+
+  :custom-face
+  (org-block ((t (:inherit default))))
+
+  :config
+  ;; Exclude DONE state tasks from refile targets
+  (defun ybk/verify-refile-target ()
+    "Exclude todo keywords with a done state from refile targets"
+    (not (member (nth 2 (org-heading-components)) org-done-keywords)))
+
+  (setq org-refile-target-verify-function 'ybk/verify-refile-target)
+  
+
+  ;; These are the programming languages org should teach itself:
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (latex . t)
+     (python . t)
+     (R . t)
+     (shell . t)))
+
+  ;; remove C-c [ from adding or excluding org file to front of agenda
+  ;; other then those specified in org-agenda-files
+  (unbind-key "C-c [" org-mode-map)
+  (unbind-key "C-c ]" org-mode-map)
+
+  (defun my/setup-org-mode ()
+    "Setup org-mode."
+    ;; An alist of symbols to prettify, see `prettify-symbols-alist'.
+    ;; Whether the symbol actually gets prettified is controlled by
+    ;; `org-pretty-compose-p', which see.
+    (setq-local prettify-symbols-unprettify-at-point nil)
+    (setq-local prettify-symbols-alist '(("*" . ?●)))
+    (setq-local prettify-symbols-compose-predicate #'my/org-pretty-compose-p))
+
+  (defun my/org-next-visible-heading (arg)
+    "Go to next heading and beginning of line."
+    (interactive "p")
+    (org-next-visible-heading arg)
+    (org-beginning-of-line))
+
+  (defun my/org-previous-visible-heading (arg)
+    "Go to previous heading and beginning of line."
+    (interactive "p")
+    (org-previous-visible-heading arg)
+    (org-beginning-of-line))
+
+  (defun my/org-pretty-compose-p (start end match)
+    "Return it if the symbol should be prettified.
+START and END are the start and end points, MATCH is the string
+match.  See also `prettify-symbols-compose-predicate'."
+    (if (string= match "*")
+        ;; prettify asterisks in headings
+        (and (org-match-line org-outline-regexp-bol)
+             (< end (match-end 0)))
+      ;; else rely on the default function
+      (prettify-symbols-default-compose-p start end match)))
+
+  ;; use font-lock-mode or this function
+  (defun my/org-toggle-link-display ()
+    "Toggle the literal or descriptive display of links."
+    (interactive)
+    (if org-descriptive-links
+        (progn (org-remove-from-invisibility-spec '(org-link))
+               (org-restart-font-lock)
+               (setq org-descriptive-links nil))
+      (progn (add-to-invisibility-spec '(org-link))
+             (org-restart-font-lock)
+             (setq org-descriptive-links t))))
+
+
+  ;; to enable <s[TAB] https://github.com/syl20bnr/spacemacs/issues/11798
+  ;; else M-x org-insert-structure-template
+  (require 'org-tempo)
+
+  ;; Code block shortcuts instead of <s[TAB]
+  (defun my-org-insert-src-block (src-code-type)
+    "Insert a `SRC-CODE-TYPE' type source code block in org-mode."
+    (interactive
+     (let ((src-code-types
+            '("emacs-lisp" "python" "sh" "calc" "R" "latex")))
+       (list (ivy-completing-read "Source code type: " src-code-types))))
+    (progn
+      (newline-and-indent)
+      (insert "#+END_SRC\n")
+      (previous-line 2)
+      (insert (format "#+BEGIN_SRC %s\n" src-code-type))
+      (org-edit-src-code)))
+
+  (bind-key "C-c s" #'my-org-insert-src-block org-mode-map)
+
+
+  ;; ;; ---- for ESS souce block start ----
+  ;; ;; This will use defined :dir in properties as the working directory
+  ;; ;; https://emacs.stackexchange.com/questions/57907/set-ess-working-directory-from-header-args-with-org-babel-sessions
+  ;; ;; Get :dir
+  ;; (defun org-header-arg (p)
+  ;;   (setq args (org-babel-get-src-block-info))
+  ;;   (assoc-default p (nth 2 args)))
+
+  ;; ;; Get language of source block
+  ;; (defun get-src-language ()
+  ;;   (setq args (org-babel-get-src-block-info))
+  ;;   (nth 0 args))
+
+  ;; ;; Send message to R process
+  ;; (defun send-msg-r (w)
+  ;;   (ess-send-string 
+  ;;    (get-process "R")
+  ;;    (format "setwd(\"%s\")" w)))
+
+  ;; ;; If point is in an R code block then if R is running: setwd()
+  ;; ;; Else if R is not running, run R and setwd().  
+  ;; (defun setwd-dir ()
+  ;;   (if (string= (get-src-language) "R")
+  ;;       (if (eq (get-process "R") nil)
+  ;;           (progn 
+  ;;             (setq w (org-header-arg :dir)) ;; Capture before R redirects
+  ;;             (defadvice R (after set-working-dir-R activate) (send-msg-r w))
+  ;;             (save-excursion (R)))
+  ;;         (send-msg-r (org-header-arg :dir)))))
+
+  ;; ;; Advise org-edit-special
+  ;; (defadvice org-edit-special (before set-working-dir activate)
+  ;;   (setwd-dir))
+
+  ;; ;; Advise org-babel-execute-src-block
+  ;; (defadvice org-babel-execute-src-block (before set-working-dir-b activate) 
+  ;;   (setwd-dir))
+  ;; ;;-------- ESS end -------
+  
+  
+  ;; surround command https://github.com/alphapapa/unpackaged.el#surround-region-with-emphasis-or-syntax-characters
+  ;; block the text and use the surround selected KEY
+  ;;###autoload
+  (defmacro unpackaged/def-org-maybe-surround (&rest keys)
+    "Define and bind interactive commands for each of KEYS that surround the region or insert text.
+Commands are bound in `org-mode-map' to each of KEYS.  If the
+region is active, commands surround it with the key character,
+otherwise call `org-self-insert-command'."
+    `(progn
+       ,@(cl-loop for key in keys
+                  for name = (intern (concat "unpackaged/org-maybe-surround-" key))
+                  for docstring = (format "If region is active, surround it with \"%s\", otherwise call `org-self-insert-command'." key)
+                  collect `(defun ,name ()
+                             ,docstring
+                             (interactive)
+                             (if (region-active-p)
+                                 (let ((beg (region-beginning))
+                                       (end (region-end)))
+                                   (save-excursion
+                                     (goto-char end)
+                                     (insert ,key)
+                                     (goto-char beg)
+                                     (insert ,key)))
+                               (call-interactively #'org-self-insert-command)))
+                  collect `(define-key org-mode-map (kbd ,key) #',name))))
+
+  ;; activate surround command
+  (unpackaged/def-org-maybe-surround "~" "=" "*")
+
+
+  ;; how to use org-return https://github.com/alphapapa/unpackaged.el#org-return-dwim
+  (defun unpackaged/org-element-descendant-of (type element)
+    "Return non-nil if ELEMENT is a descendant of TYPE.
+TYPE should be an element type, like `item' or `paragraph'.
+ELEMENT should be a list like that returned by `org-element-context'."
+    ;; MAYBE: Use `org-element-lineage'.
+    (when-let* ((parent (org-element-property :parent element)))
+      (or (eq type (car parent))
+          (unpackaged/org-element-descendant-of type parent))))
+
+  ;;###autoload
+  (defun unpackaged/org-return-dwim (&optional default)
+    "A helpful replacement for `org-return'.  With prefix, call `org-return'.
+On headings, move point to position after entry content.  In
+lists, insert a new item or end the list, with checkbox if
+appropriate.  In tables, insert a new row or end the table."
+    ;; Inspired by John Kitchin: http://kitchingroup.cheme.cmu.edu/blog/2017/04/09/A-better-return-in-org-mode/
+    (interactive "P")
+    (if default
+        (org-return)
+      (cond
+       ;; Act depending on context around point.
+
+       ;; NOTE: I prefer RET to not follow links, but by uncommenting this block, links will be
+       ;; followed.
+
+       ;; ((eq 'link (car (org-element-context)))
+       ;;  ;; Link: Open it.
+       ;;  (org-open-at-point-global))
+
+       ((org-at-heading-p)
+        ;; Heading: Move to position after entry content.
+        ;; NOTE: This is probably the most interesting feature of this function.
+        (let ((heading-start (org-entry-beginning-position)))
+          (goto-char (org-entry-end-position))
+          (cond ((and (org-at-heading-p)
+                      (= heading-start (org-entry-beginning-position)))
+                 ;; Entry ends on its heading; add newline after
+                 (end-of-line)
+                 (insert "\n\n"))
+                (t
+                 ;; Entry ends after its heading; back up
+                 (forward-line -1)
+                 (end-of-line)
+                 (when (org-at-heading-p)
+                   ;; At the same heading
+                   (forward-line)
+                   (insert "\n")
+                   (forward-line -1))
+                 ;; FIXME: looking-back is supposed to be called with more arguments.
+                 (while (not (looking-back (rx (repeat 3 (seq (optional blank) "\n")))))
+                   (insert "\n"))
+                 (forward-line -1)))))
+
+       ((org-at-item-checkbox-p)
+        ;; Checkbox: Insert new item with checkbox.
+        (org-insert-todo-heading nil))
+
+       ((org-in-item-p)
+        ;; Plain list.  Yes, this gets a little complicated...
+        (let ((context (org-element-context)))
+          (if (or (eq 'plain-list (car context))  ; First item in list
+                  (and (eq 'item (car context))
+                       (not (eq (org-element-property :contents-begin context)
+                                (org-element-property :contents-end context))))
+                  (unpackaged/org-element-descendant-of 'item context))  ; Element in list item, e.g. a link
+              ;; Non-empty item: Add new item.
+              (org-insert-item)
+            ;; Empty item: Close the list.
+            ;; TODO: Do this with org functions rather than operating on the text. Can't seem to find the right function.
+            (delete-region (line-beginning-position) (line-end-position))
+            (insert "\n"))))
+
+       ((when (fboundp 'org-inlinetask-in-task-p)
+          (org-inlinetask-in-task-p))
+        ;; Inline task: Don't insert a new heading.
+        (org-return))
+
+       ((org-at-table-p)
+        (cond ((save-excursion
+                 (beginning-of-line)
+                 ;; See `org-table-next-field'.
+                 (cl-loop with end = (line-end-position)
+                          for cell = (org-element-table-cell-parser)
+                          always (equal (org-element-property :contents-begin cell)
+                                        (org-element-property :contents-end cell))
+                          while (re-search-forward "|" end t)))
+               ;; Empty row: end the table.
+               (delete-region (line-beginning-position) (line-end-position))
+               (org-return))
+              (t
+               ;; Non-empty row: call `org-return'.
+               (org-return))))
+       (t
+        ;; All other cases: call `org-return'.
+        (org-return)))))
+
+  ;; TODO keywords
+  (setq org-todo-keywords
+        (quote ((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d)")
+                (sequence "HOLD(h@/!)" "CANCELLED(c@/!)"))))
+
+  ;;Menyenagkan utk tukar kekunci TODO dengan C-c C-t KEKUNCI (org-todo-keywords)
+  (setq org-use-fast-todo-selection t)
+
+  ;;Tetapkan warna keyword
+  (setq org-todo-keyword-faces
+        (quote (("TODO" :foreground "red" :weight bold)
+                ("NEXT" :foreground "purple" :weight bold)
+                ("DONE" :foreground "forest green" :weight bold)
+                ("HOLD" :foreground "magenta" :weight bold)
+                ("CANCELLED" :foreground "dark green" :weight bold)
+                )))
+
+
+  ;;== Buat TAGS automatik
+  ;; Status TODO memberikan atau menukarkan tag secara automatisk. Cth ke status 'HOLD'
+  ;; memberikan tag 'HOLD' dan ke status 'DONE' membuang tag 'HOLD' dan 'CANCELLED'
+  (setq org-todo-state-tags-triggers
+        (quote (("CANCELLED" ("CANCELLED" . t))
+                ("HOLD" ("HOLD" . t))
+                (done ("HOLD"))
+                ("TODO" ("CANCELLED") ("HOLD"))
+                ("NEXT" ("CANCELLED") ("HOLD"))
+                ("DONE" ("CANCELLED") ("HOLD")))))
+
+  ;; Utk tukar status TODO menggunakan S-kiri dan S-kanan dan elakkan proses biasa seperti memasukkan masa
+  ;; atau nota utk HOLD atau CANCELLED sekiranya yang ingin dibuat ialah pertukaran status TODO sahaja
+  (setq org-treat-S-cursor-todo-selection-as-state-change nil)
+
+  ;;== Tukar parents status ke "DONE" hanya bila semua child tasks sudah ke status "DONE"
+  (setq org-enforce-todo-dependencies t
+        org-enforce-todo-checkbox-dependencies t)
+
+  ;;== Masukkan annotation di task bila tukar status
+  (setq org-log-done (quote time))
+
+  ;;== Masukkan annotation bila tukar tarikh DEADLINE
+  (setq org-log-redeadline (quote time))
+
+  ;;== Masukkan annotation bila tukar tarikh SCHEDULE
+  (setq org-log-reschedule (quote time))
+
+
+  ;; =================================
+  ;; Export HTML with usefule anchors
+  ;; https://github.com/alphapapa/unpackaged.el#export-to-html-with-useful-anchors
+  (define-minor-mode unpackaged/org-export-html-with-useful-ids-mode
+    "Attempt to export Org as HTML with useful link IDs.
+Instead of random IDs like \"#orga1b2c3\", use heading titles,
+made unique when necessary."
+    :global t
+    (if unpackaged/org-export-html-with-useful-ids-mode
+        (advice-add #'org-export-get-reference :override #'unpackaged/org-export-get-reference)
+      (advice-remove #'org-export-get-reference #'unpackaged/org-export-get-reference)))
+
+  (defun unpackaged/org-export-get-reference (datum info)
+    "Like `org-export-get-reference', except uses heading titles instead of random numbers."
+    (let ((cache (plist-get info :internal-references)))
+      (or (car (rassq datum cache))
+          (let* ((crossrefs (plist-get info :crossrefs))
+                 (cells (org-export-search-cells datum))
+                 ;; Preserve any pre-existing association between
+                 ;; a search cell and a reference, i.e., when some
+                 ;; previously published document referenced a location
+                 ;; within current file (see
+                 ;; `org-publish-resolve-external-link').
+                 ;;
+                 ;; However, there is no guarantee that search cells are
+                 ;; unique, e.g., there might be duplicate custom ID or
+                 ;; two headings with the same title in the file.
+                 ;;
+                 ;; As a consequence, before re-using any reference to
+                 ;; an element or object, we check that it doesn't refer
+                 ;; to a previous element or object.
+                 (new (or (cl-some
+                           (lambda (cell)
+                             (let ((stored (cdr (assoc cell crossrefs))))
+                               (when stored
+                                 (let ((old (org-export-format-reference stored)))
+                                   (and (not (assoc old cache)) stored)))))
+                           cells)
+                          (when (org-element-property :raw-value datum)
+                            ;; Heading with a title
+                            (unpackaged/org-export-new-title-reference datum cache))
+                          ;; NOTE: This probably breaks some Org Export
+                          ;; feature, but if it does what I need, fine.
+                          (org-export-format-reference
+                           (org-export-new-reference cache))))
+                 (reference-string new))
+            ;; Cache contains both data already associated to
+            ;; a reference and in-use internal references, so as to make
+            ;; unique references.
+            (dolist (cell cells) (push (cons cell new) cache))
+            ;; Retain a direct association between reference string and
+            ;; DATUM since (1) not every object or element can be given
+            ;; a search cell (2) it permits quick lookup.
+            (push (cons reference-string datum) cache)
+            (plist-put info :internal-references cache)
+            reference-string))))
+
+  (defun unpackaged/org-export-new-title-reference (datum cache)
+    "Return new reference for DATUM that is unique in CACHE."
+    (cl-macrolet ((inc-suffixf (place)
+                               `(progn
+                                  (string-match (rx bos
+                                                    (minimal-match (group (1+ anything)))
+                                                    (optional "--" (group (1+ digit)))
+                                                    eos)
+                                                ,place)
+                                  ;; HACK: `s1' instead of a gensym.
+                                  (-let* (((s1 suffix) (list (match-string 1 ,place)
+                                                             (match-string 2 ,place)))
+                                          (suffix (if suffix
+                                                      (string-to-number suffix)
+                                                    0)))
+                                    (setf ,place (format "%s--%s" s1 (cl-incf suffix)))))))
+      (let* ((title (org-element-property :raw-value datum))
+             (ref (url-hexify-string (substring-no-properties title)))
+             (parent (org-element-property :parent datum)))
+        (while (--any (equal ref (car it))
+                      cache)
+          ;; Title not unique: make it so.
+          (if parent
+              ;; Append ancestor title.
+              (setf title (concat (org-element-property :raw-value parent)
+                                  "--" title)
+                    ref (url-hexify-string (substring-no-properties title))
+                    parent (org-element-property :parent parent))
+            ;; No more ancestors: add and increment a number.
+            (inc-suffixf ref)))
+        ref)))
+  )
+
+
+(use-package ob-core
+  :straight org
+  ;; ob is org-babel, which lets org know about code and code blocks
+  :defer t
+  :custom
+  ;; I know what I'm getting myself into.
+  (org-confirm-babel-evaluate nil "Don't ask to confirm evaluation."))
+
+
+(use-package org-agenda
+  ;; Here's where I set which files are added to org-agenda, which controls
+  ;; org's global todo list, scheduling, and agenda features.  I use
+  ;; Syncthing to keep these files in sync across computers.
+  :straight org
+  :bind
+  (("C-c a" . org-agenda)
+   ("<f5>" . org-agenda)
+   :map org-agenda-mode-map
+   ;; overrides org-agenda-redo, which I use "g" for anyway
+   ("r" . org-agenda-refile)
+   ;; overrides saving all org buffers, also bound to C-x C-s
+   ("t" . org-agenda-schedule)
+   ("d" . my/org-agenda-mark-done)
+   ("n" . my/org-agenda-mark-next)
+   )
+
+  :init
+  ;; create org folder if doesn't exist
+  (defvar my-org-directory "~/Dropbox/org")
+  ;;(defvar my-org-directory "C:/Users/ybka/OneDrive - Folkehelseinstituttet/Dropbox/org")
+  (unless (file-exists-p my-org-directory)
+    (make-directory my-org-directory))
+
+  (defvar my-org-todo (expand-file-name "todo.org" my-org-directory)
+    "Unstructure capture")
+  (defvar my-org-misc (expand-file-name "misc.org" my-org-directory)
+    "All other info for diary.")
+  (defvar my-org-note (expand-file-name "notes.org" my-org-directory)
+    "All other info for diary.")
+  (defvar my-org-meet (expand-file-name "meeting.org" my-org-directory)
+    "All other info for diary.")
+  (defvar my-org-cook (expand-file-name "cooking.org" my-org-directory)
+    "All other info for diary.")
+
+
+  ;;Include all files under these folder in org-agenda-files
+  (setq org-agenda-files `(,org-default-notes-file
+                           ,my-org-todo
+                           ,my-org-misc
+                           ,my-org-meet
+                           ,my-org-cook))
+  (setq org-agenda-text-search-extra-files `(,my-org-note))
+
+  :custom
+  (org-directory "~/Dropbox/org/" "Kept in sync with syncthing.")
+  ;; (org-directory "C:/Users/ybka/OneDrive - Folkehelseinstituttet/Dropbox/org/" "Kept in sync with sync thing")
+  (org-default-notes-file (concat org-directory "refile.org"))
+  (org-agenda-skip-deadline-if-done t "Remove done deadlines from agenda.")
+  (org-agenda-skip-scheduled-if-done t "Remove done scheduled from agenda.")
+  (org-agenda-skip-timestamp-if-done t "Don't show timestamped things in agenda if they're done.")
+  (org-agenda-skip-scheduled-if-deadline-is-shown 'not-today "Don't show scheduled if the deadline is visible unless it's also scheduled for today.")
+  (org-agenda-skip-deadline-prewarning-if-scheduled 'pre-scheduled "Skip deadline warnings if it is scheduled.")
+  (org-deadline-warning-days 3 "warn me 3 days before a deadline")
+  (org-agenda-tags-todo-honor-ignore-options t "Ignore scheduled items in tags todo searches.")
+  (org-agenda-tags-column 'auto)
+  (org-agenda-window-setup 'only-window "Use current window for agenda.")
+  (org-agenda-restore-windows-after-quit t "Restore previous config after I'm done.")
+  (org-agenda-span 'day) ; just show today. I can "vw" to view the week
+  (org-agenda-time-grid
+   '((daily today remove-match) (800 1000 1200 1400 1600 1800 2000)
+     "" "") "By default, the time grid has a lot of ugly '-----' lines. Remove those.")
+  (org-agenda-scheduled-leaders '("" "%2dx ") "I don't need to know that something is scheduled.  That's why it's appearing on the agenda in the first place.")
+  (org-agenda-block-separator ?- "Use nice unicode character instead of ugly = to separate agendas:")
+  (org-agenda-deadline-leaders '("Deadline: " "In %d days: " "OVERDUE %d day: ") "Make deadlines, especially overdue ones, stand out more:")
+  (org-agenda-current-time-string "---> NOW <---")
+  ;; The agenda is ugly by default. It doesn't properly align items and it
+  ;; includes weird punctuation. Fix it:
+  (org-agenda-prefix-format '((agenda . "%-12c%-14t%s")
+                              (todo . " %i %-12:c")
+                              (tags . " %i %-12:c")
+                              (search . " %i %-12:c")))
+
+  ;; Custom agenda
+  (org-agenda-custom-commands
+   '(
+     ("h" "Home Agenda"
+      ((agenda "" nil)
+       (todo "NEXT"
+             ((org-agenda-max-entries 5)
+              (org-agenda-overriding-header "Dagens oppgaver:")
+              ))
+       (tags "@home"
+             ((org-agenda-overriding-header "Samlet oppgaver:")
+              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT" "CANCELLED")))))
+       (tags "REFILE"
+             ((org-agenda-overriding-header "Refile:")
+              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT" "CANCELLED"))))))
+      ((org-agenda-tag-filter-preset '("-@work"))))
+     ("w" "Work Agenda"
+      ((agenda "" nil)
+       (todo "NEXT"
+             ((org-agenda-max-entries 5)
+              (org-agenda-overriding-header "Dagens oppgaver:")
+              ))
+       (tags "@work"
+             ((org-agenda-overriding-header "Skal gjøres:")
+              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT" "CANCELLED")))))
+       (tags "REFILE"
+             ((org-agenda-overriding-header "Refile:")
+              (org-agenda-skip-function '(org-agenda-skip-entry-if 'todo '("DONE" "NEXT" "CANCELLED"))))))
+      ((org-agenda-tag-filter-preset '("-@home"))))
+     ("d" "deadlines"
+      ((agenda ""
+               ((org-agenda-entry-types '(:deadline))
+                (org-agenda-span 'fortnight)
+                (org-agenda-time-grid nil)
+                (org-deadline-warning-days 0)
+                (org-agenda-skip-deadline-prewarning-if-scheduled nil)
+                (org-agenda-skip-deadline-if-done nil)))))
+     ("m" "Meetings"
+      ((agenda "" nil)
+       (tags "@meeting")))
+     ("b" "bibliography"
+      ((tags "CATEGORY=\"bib\"+LEVEL=2"
+             ((org-agenda-overriding-header "")))))
+     ("u" "unscheduled"
+      ((todo  "TODO"
+              ((org-agenda-overriding-header "Unscheduled tasks")
+               (org-agenda-todo-ignore-with-date t)))))
+     ("c" "Recepies"
+      ((agenda "" nil)
+       (tags "recepi")))
+     ))
+
+  :config
+  (defun my/org-agenda-mark-done (&optional _arg)
+    "Mark current TODO as DONE.
+See `org-agenda-todo' for more details."
+    (interactive "P")
+    (org-agenda-todo "DONE"))
+
+  (defun my/org-agenda-mark-next (&optional _arg)
+    "Mark current TODO as NEXT.
+See `org-agenda-todo' for more details."
+    (interactive "P")
+    (org-agenda-todo "NEXT"))
+  )
+
+
+(use-package org-capture
+  ;; %^G to use tags
+  :straight org
+  :bind*
+  ("C-c c" . org-capture)
+  :bind
+  ((:map org-capture-mode-map
+         ("C-c C-j" . my/org-capture-refile-and-jump))
+   (:map my-personal-map
+         ("p" . ybk/org-task-capture)))
+  :custom
+  (org-capture-templates
+   (quote (("t" "Todo" entry (file org-default-notes-file)
+            "* TODO %? \nDEADLINE: %^T \n:PROPERTIES:\n:CREATED: %U\n:END:\n%i")
+           ("d" "Task" entry (file org-default-notes-file)
+            "* TODO %? \n:PROPERTIES:\n:CREATED: %U\n:END:\n%i")
+           ("m" "Meeting" entry (file my-org-meet)
+            "* %? \nSCHEDULED: %^T \n:PROPERTIES:\n:END:\n\n")
+           ("e" "Mail" entry (file org-default-notes-file)
+            "* TODO [#A] %?\nSCHEDULED: %(org-insert-time-stamp (org-read-date nil t \"+0d\"))\n%a\n")
+           ("n" "Note" entry (file my-org-note)
+            "* %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n %i")
+           ("r" "Recepies" entry (file my-org-cook)
+            "* %?\n:PROPERTIES:\n:TYPE:\n:CREATED: %U\n:END:\n %i")
+           )))
+  :config
+  (defun my/org-capture-refile-and-jump ()
+    (interactive)
+    (org-capture-refile)
+    (org-refile-goto-last-stored))
+
+  ;; Org-capture shortcut
+  (defun ybk/org-task-capture ()
+    "Capture a task with my default template."
+    (interactive)
+    (org-capture nil "t"))
+  )
+
+;; Perhaps should define org-export-define-backend 
+(use-package ox-pandoc
+  ;; export with pandoc
+  :after org
+  :config
+  ;; default options for all output formats
+  (setq org-pandoc-options '((standalone . t)))
+  )
+
+(use-package ox-hugo
+  ;; Use Hugo to build site https://ox-hugo.scripter.co/
+  :after ox
+  :config
+  ;; Populates only the EXPORT_FILE_NAME property in the inserted headline.
+  (with-eval-after-load 'org-capture
+    (defun org-hugo-new-subtree-post-capture-template ()
+      "Returns `org-capture' template string for new Hugo post.
+See `org-capture-templates' for more information."
+      (let* ((title (read-from-minibuffer "Post Title: ")) ;Prompt to enter the post title
+             (fname (org-hugo-slug title)))
+        (mapconcat #'identity
+                   `(
+                     ,(concat "* TODO " title)
+                     ":PROPERTIES:"
+                     ,(concat ":EXPORT_FILE_NAME: " fname)
+                     ":END:"
+                     "%?\n")          ;Place the cursor here finally
+                   "\n")))
+
+    (add-to-list 'org-capture-templates
+                 '("h"                ;`org-capture' binding + h
+                   "Hugo post"
+                   entry
+                   ;; It is assumed that below file is present in `org-directory'
+                   ;; and that it has a "Blog Ideas" heading. It can even be a
+                   ;; symlink pointing to the actual location of all-posts.org!
+                   (file+olp "all-posts.org" "Blog Ideas")
+                   (function org-hugo-new-subtree-post-capture-template))))
+  )
+
+
+(use-package org-eww
+  ;; Org-eww lets me capture eww webpages with org-mode
+  :straight org
+  :straight eww
+  :after eww)
+
+(use-package org-indent
+  ;; org-indent-mode nicely aligns text with the outline level
+  :straight org
+  :hook
+  (org-mode . org-indent-mode))
+
+(use-package ox-gfm
+  ;; to export to markdown
+  ;; M-x org-gfm-export-to-markdown
+  :straight t
+  :after org
+  :bind (:map my-assist-map
+              ("d m" . org-gfm-export-to-markdown) ;export as file
+              ("d a" . org-gfm-export-as-markdown) ;export as buffer
+              )
+  :init
+  (eval-after-load "org"
+    '(require 'ox-gfm nil t))
+
+  :config
+  (which-key-add-key-based-replacements
+    "<f9> d" "org-exp-md")
+  )
+
+;;; JSON
+(use-package json-mode
+  :mode ("\\.json"))
+
+;; M-x json-navigator-navigate-after-point
+(use-package json-navigator)
+
+;;; Spellcheck
+;; This setting specifically for Windows
+;; http://juanjose.garciaripoll.com/blog/my-emacs-windows-configuration/
+;; https://www.reddit.com/r/emacs/comments/8by3az/how_to_set_up_sell_check_for_emacs_in_windows/
+;; general guide for downloading hundspell http://www.nextpoint.se/?p=656
+;; Dictionary https://github.com/LibreOffice/dictionaries
+(use-package flyspell
+  :init
+  ;; Dictionary folder. Download from https://github.com/LibreOffice/dictionaries
+  (setenv "DICTPATH" "C:/Users/ybka/AppData/Roaming/hunspell-1.3.2-3-w32/share/hunspell")
+  ;; (setenv "DICTPATH" "C:/Users/ybka/scoop/apps/msys2/current/mingw64/share/hunspell")
+  ;; (setenv "DICTIONARY"  "C:\\Users\\ybka\\AppData\\Roaming\\hunspell-1.3.2-3-w32\\share\\hunspell\\en_GB")
+  :custom
+  (ispell-program-name "C:\\Users\\ybka\\AppData\\Roaming\\hunspell-1.3.2-3-w32\\bin\\hunspell.exe")
+  ;; ;;use the newest version installed via MSYS2
+  ;; (ispell-program-name "C:/Users/ybka/scoop/apps/msys2/2020-09-03/mingw64/bin/hunspell.exe") 
+  (ispell-extra-args '("-p" ,(expand-file-name "hunspell" my-emacs-cache)) "Save dict common location")
+  :hook ((text-mode markdown-mode) . flyspell-mode)
+  :hook ((prog-mode
+          ess-mode
+          ado-mode
+          emacs-lisp-mode) . flyspell-prog-mode) ;check only for comments
+  :bind (:map my-assist-map
+              ("L n" . lang-norsk)
+              ("L e" . lang-eng))
+  :config
+  (setq ispell-extra-args '("--sug-mude=ultra" ;normal|fast|ultra for speed
+                            "--lang=en_GB"))
+  
+  (which-key-add-key-based-replacements
+    "<f9> L" "change lang")
+  
+  (defun lang-norsk ()
+    "Change to Norwegian."
+    (interactive)
+    (ispell-change-dictionary "nb_NO")
+    (flyspell-buffer))
+
+  (defun lang-eng ()
+    "Change to English."
+    (interactive)
+    (ispell-change-dictionary "nb_GB")
+    (flyspell-buffer))
+
+  (add-to-list 'ispell-skip-region-alist '("^#+BEGIN_SRC" . "^#+END_SRC"))
+  )
+
+(use-package flyspell-correct
+  ;; https://github.com/d12frosted/flyspell-correct
+  :after flyspell
+  :bind (
+         :map flyspell-mode-map
+         ("C-;" . flyspell-correct-wrapper)
+         :map my-assist-map
+         ("L-<left>" . flyspell-correct-previous)
+         ("L-<right>" . flyspell-correct-next)
+         ("L-<return>" . flyspell-corrent-at-point )))
+
+(use-package flyspell-correct-ivy
+  :after flyspell-correct)
+;; How to ignore some words if flyspell can read here
+;; https://stackoverflow.com/questions/4671908/how-to-make-flyspell-bypass-some-words-by-context
 
 
 ;;; Appearance
@@ -2428,7 +3465,7 @@ if there is displayed buffer that have shell it will use that window"
 ;; (load-theme 'naysayer t)
 
 (use-package doom-themes
-  :ensure t
+  :straight t
   :init
   ;; need to load at init for cyclye theme to work
   (load-theme 'doom-one t)
@@ -2442,12 +3479,11 @@ if there is displayed buffer that have shell it will use that window"
 
   ;; utk tukar tema f10-t
   (setq my-themes '(doom-nord
-                    doom-nord-light
-                    doom-vibrant
                     doom-acario-light
-                    doom-gruvbox
-                    doom-tomorrow-day
-                    doom-solarized-dark
+                    doom-acario-dark
+                    ;; doom-gruvbox
+                    ;; doom-tomorrow-day
+                    ;; doom-solarized-dark
                     ))
 
   (setq my-cur-theme nil)
@@ -2481,9 +3517,9 @@ if there is displayed buffer that have shell it will use that window"
 (defface egoge-display-time
   '((((type x w32 mac))
      ;; #006655 is the background colour of my default face.
-     (:foreground "#0be" :inherit bold))
+     (:foreground "green" :inherit bold)) ;#0be
     (((type tty))
-     (:foreground "blue")))
+     (:foreground "dark red")))
   "Face used to display the time in the mode line.")
 
 
@@ -2540,14 +3576,24 @@ if there is displayed buffer that have shell it will use that window"
                ))
 
 
+(use-package all-the-icons
+  :config
+  (all-the-icons-octicon "file-binary")  ;; GitHub Octicon for Binary File
+  (all-the-icons-faicon  "cogs")         ;; FontAwesome icon for cogs
+  (all-the-icons-wicon   "tornado")      ;; Weather Icon for tornado
+  )
+
 (use-package doom-modeline
   ;; Run M-x all-the-icons-install-fonts to install all-the-icons
-  :ensure t
+  :straight t
   :custom
   (doom-modeline-buffer-file-name-style 'truncate-with-project)
-  (doom-modeline-icon t)
-  (doom-modeline-major-mode-icon nil)
+  (doom-modeline-icon (display-graphic-p))
+  (doom-modeline-major-mode-icon t)
+  (doom-modeline-major-mode-color-icon t "Display the colorful icon for major-mode")
   (doom-modeline-minor-modes nil)
+  (doom-modeline-buffer-modification-icon t)
+  (doom-modeline-project-detection 'project)
   (inhibit-compacting-font-caches t "Don't compact font caches during GC in windows")
   :hook
   (after-init . doom-modeline-mode)
@@ -2572,12 +3618,13 @@ The icons may not be showed correctly in terminal and on Windows.")
                       :box '(:line-width 6 :color "#565063")
                       :overline nil
                       :underline nil)
-
   )
+
+
 
 ;; Show hexadecimal color in the background they represent
 (use-package rainbow-mode
-  :ensure t
+  :straight t
   :diminish rainbow-mode
   :hook
   ((prog-mode
@@ -2585,5 +3632,72 @@ The icons may not be showed correctly in terminal and on Windows.")
     ess-mode text-mode
     markdown-mode
     LaTeX-mode) . rainbow-mode)
+  )
+
+
+
+;;; Extra
+;;;; Straight related
+;; https://www.manueluberti.eu/emacs/2019/11/02/thirty-straight-days/
+(defun mu-straight-pull-or-prune (&optional prune)
+  "Update all available packages via `straight'.
+With PRUNE, prune the build cache and the build directory."
+  (interactive "P")
+  (if prune
+      (when (y-or-n-p "Prune build cache and build directory?")
+        (straight-prune-build-cache)
+        (straight-prune-build-directory))
+    (when (y-or-n-p "Update all available packages?")
+      (straight-pull-all))))
+
+(bind-key* "<f7>" #'mu-straight-pull-or-prune)
+
+;;;; Calendar
+;; Manual setup
+(setq calendar-week-start-day 1
+      calendar-day-name-array ["Søndag" "Mandag" "Tirsdag" "Onsdag"
+                               "Torsdag" "Fredag" "Lørdag"]
+      calendar-month-name-array ["Januar" "Februar" "Mars" "April" "Mai"
+                                 "Juni" "Juli" "August" "September"
+                                 "Oktober" "November" "Desember"])
+
+(use-package calendar-norway
+  ;; :custom
+  ;; (calendar-holidays 'calendar-norway-raude-dagar "Include days where you don't have to work")
+  ;; (calendar-holidays 'calendar-norway-andre-merkedagar "Include other days that people celebrate")
+  ;; (calendar-holidays 'calendar-norway-dst "Daylight saving")
+  :config
+  ;; Set what holidays you want in your calendar:
+  (setq calendar-holidays
+        (append
+         ;; Include days where you don't have to work:
+         calendar-norway-raude-dagar
+         ;; Include other days that people celebrate:
+         calendar-norway-andre-merkedagar
+         ;; Include daylight savings time:
+         calendar-norway-dst
+         ;; And then you can add some non-Norwegian holidays etc. if you like:
+         '((holiday-fixed 3 17 "St. Patricksdag")
+           (holiday-fixed 10 31 "Hallowe'en")
+           (holiday-float 11 4 4 "Thanksgiving")
+           (solar-equinoxes-solstices))))
+  )
+
+;;;; Weather
+(use-package weather-metno
+  :bind (:map my-personal-map
+              ("w" . weather-metno-forecast))
+  :init
+  (setq weather-metno-location-name "Oslo, Norge"
+        weather-metno-location-latitude 59
+        weather-metno-location-longitude 10
+        )
+  (setq with-editor-emacsclient-executable "emacsclient")
+
+  :config
+  ;; ;; change icon size
+  ;; (setq weather-metno-use-imagemagick t)
+  ;; (setq weather-metno-get-image-props '(:width 10 :height 10 :ascent center))
+  (setq weather-metno-get-image-props '(:ascent center))
   )
 
