@@ -1249,7 +1249,8 @@ horizontal mode."
   ;; Resize windows with ratio https://github.com/roman/golden-ratio.el
   :straight t
   :bind* (:map my-personal-map
-               ("v" . golden-ratio-mode))
+               ("V" . golden-ratio-mode)
+               ("v" . golden-ratio))
   :diminish golden-ratio-mode
   :init
   ;; (golden-ratio-mode 1)
@@ -2112,11 +2113,25 @@ showing them."
                                         ; window
     )
   :config
+  ;; (setq neo-theme 'classic) ; 'classic, 'nerd, 'ascii, 'arrow
+  ;;use icon for window and arrow for terminal
+  (setq neo-theme (if (display-graphic-p) 'icons 'arrow))
+
+  ;; https://emacs.stackexchange.com/questions/37678/neotree-window-not-resizable
+  (setq neo-window-fixed-size nil)
+  ;; Set the neo-window-width to the current width of the
+  ;; neotree window, to trick neotree into resetting the
+  ;; width back to the actual window width.
+  ;; Fixes: https://github.com/jaypei/emacs-neotree/issues/262
+  (eval-after-load "neotree"
+    '(add-to-list 'window-size-change-functions
+                  (lambda (frame)
+                    (let ((neo-window (neo-global--get-window)))
+                      (unless (null neo-window)
+                        (setq neo-window-width (window-width neo-window)))))))
+  
   (progn
-    (setq neo-theme 'classic) ; 'classic, 'nerd, 'ascii, 'arrow
-
     (setq neo-vc-integration '(face char))
-
     ;; Patch to fix vc integration
     (defun neo-vc-for-node (node)
       (let* ((backend (vc-backend node))
@@ -2178,7 +2193,7 @@ showing them."
 
     (bind-keys
      :map neotree-mode-map
-     ("^"          . ybk/neotree-go-up-dir)
+     ("<prior>"          . ybk/neotree-go-up-dir)
      ("C-c +"      . ybk/find-file-next-in-dir)
      ("C-c -"      . ybk/find-file-prev-in-dir)
      ("<C-return>" . neotree-change-root)
@@ -2220,7 +2235,7 @@ showing them."
                ;; Usually I bind C-z to `undo', but I don't really use `undo' in
                ;; inferior buffers. Use it to switch to the R script (like C-c
                ;; C-z):
-               ("C-z" . ess-switch-to-inferior-or-script-buffer)))
+               ([S-return] . ess-switch-to-inferior-or-script-buffer)))
   :config
   (defun ess-company-stop-hook ()
     "Disabled company in inferior ess."
@@ -2266,7 +2281,7 @@ showing them."
          )
 
   :custom
-  (inferior-R-program-name "c:/Program Files/R/R-4.0.2/bin/R.exe")
+  ;; (inferior-R-program-name "c:/Program Files/R/R-4.0.2/bin/R.exe")
   (ess-plain-first-buffername nil "Name first R process R:1")
   (ess-tab-complete-in-script t "TAB should complete.")
   (ess-style 'RStudio)
@@ -3581,6 +3596,18 @@ See `org-capture-templates' for more information."
   (all-the-icons-octicon "file-binary")  ;; GitHub Octicon for Binary File
   (all-the-icons-faicon  "cogs")         ;; FontAwesome icon for cogs
   (all-the-icons-wicon   "tornado")      ;; Weather Icon for tornado
+
+  ;; A workaround for missing all-the-icons in neotree when starting emacs in client mode
+  ;; Ref:
+  ;;   - https://github.com/jaypei/emacs-neotree/issues/194
+  ;;   - https://emacs.stackexchange.com/questions/24609/determine-graphical-display-on-startup-for-emacs-server-client
+  (defun new-frame-setup (frame)
+    (if (display-graphic-p frame)
+        (setq neo-theme 'icons)))
+  ;; Run for already-existing frames (For single instance emacs)
+  (mapc 'new-frame-setup (frame-list))
+  ;; Run when a new frame is created (For emacs in client/server mode)
+  (add-hook 'after-make-frame-functions 'new-frame-setup)
   )
 
 (use-package doom-modeline
@@ -3618,6 +3645,15 @@ The icons may not be showed correctly in terminal and on Windows.")
                       :box '(:line-width 6 :color "#565063")
                       :overline nil
                       :underline nil)
+
+  ;; enable modeline icons with daemon mode
+  ;; http://sodaware.sdf.org/notes/emacs-daemon-doom-modeline-icons/
+  (defun enable-doom-modeline-icons (_frame)
+    (setq doom-modeline-icon t))
+  
+  (add-hook 'after-make-frame-functions 
+            #'enable-doom-modeline-icons)
+  
   )
 
 
