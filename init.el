@@ -2103,8 +2103,27 @@ showing them."
 (use-package neotree
   :straight t
   :defer 3
-  :bind ("<f4>" . neotree-toggle)
+  :bind (:map my-neotree-map
+              ("<f4>"       . neotree-toggle)
+              ("<prior>"    . ybk/neotree-go-up-dir)
+              ("+"          . ybk/find-file-next-in-dir)
+              ("-"          . ybk/find-file-prev-in-dir)
+              ("<C-return>" . neotree-change-root)
+              ("C"          . neotree-change-root)
+              ("c"          . neotree-create-node)
+              ("+"          . neotree-create-node)
+              ("d"          . neotree-delete-node)
+              ("r"          . neotree-rename-node)
+              ("h"          . neotree-hidden-file-toggle)
+              ("g"          . neotree-refresh)
+              ("A"          . neotree-stretch-toggle)
+              )
+  
   :init
+  (unbind-key [f4])
+  (bind-keys :prefix [f4]
+             :prefix-map my-neotree-map)
+
   (progn
     (setq-default neo-smart-open t) ;  every time when the neotree window is
                                         ;  opened, it will try to find current
@@ -2129,7 +2148,7 @@ showing them."
                     (let ((neo-window (neo-global--get-window)))
                       (unless (null neo-window)
                         (setq neo-window-width (window-width neo-window)))))))
-  
+
   (progn
     (setq neo-vc-integration '(face char))
     ;; Patch to fix vc integration
@@ -2191,19 +2210,20 @@ showing them."
       (interactive)
       (ybk/find-file-next-in-dir :prev))
 
-    (bind-keys
-     :map neotree-mode-map
-     ("<prior>"          . ybk/neotree-go-up-dir)
-     ("C-c +"      . ybk/find-file-next-in-dir)
-     ("C-c -"      . ybk/find-file-prev-in-dir)
-     ("<C-return>" . neotree-change-root)
-     ("C"          . neotree-change-root)
-     ("c"          . neotree-create-node)
-     ("+"          . neotree-create-node)
-     ("d"          . neotree-delete-node)
-     ("r"          . neotree-rename-node)
-     ("h"          . neotree-hidden-file-toggle)
-     ("f"          . neotree-refresh)))
+    ;; (bind-keys
+    ;;  :map neotree-mode-map
+    ;;  ("<prior>"          . ybk/neotree-go-up-dir)
+    ;;  ("C-c +"      . ybk/find-file-next-in-dir)
+    ;;  ("C-c -"      . ybk/find-file-prev-in-dir)
+    ;;  ("<C-return>" . neotree-change-root)
+    ;;  ("C"          . neotree-change-root)
+    ;;  ("c"          . neotree-create-node)
+    ;;  ("+"          . neotree-create-node)
+    ;;  ("d"          . neotree-delete-node)
+    ;;  ("r"          . neotree-rename-node)
+    ;;  ("h"          . neotree-hidden-file-toggle)
+    ;;  ("g"          . neotree-refresh))
+    )
   )
 
 
@@ -2212,7 +2232,7 @@ showing them."
   ;; https://github.com/fourier/ztree
   :straight t
   :bind (
-         :map my-personal-map
+         :map my-neotree-map
          ("z" . ztree-dir)
          ("Z" . ztree-diff)
          )
